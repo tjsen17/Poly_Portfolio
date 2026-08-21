@@ -34,4 +34,3 @@
 ## 📫 Contact
 - **Email:** tjsen17@naver.com
 - **Notion Project_Portfolio:** [포트폴리오 구경가기!](https://www.notion.so/cbcc5c46742783bba6f201e5d2702808?v=7b0c5c46742783fc840b88f70f301b02)
-- **Notion Team Project_Portfolio:** [포트폴리오 구경가기!](https://app.notion.com/p/Human-exe-Team-Briefing-368a72a369ca807ead8bcecb8da58650)
