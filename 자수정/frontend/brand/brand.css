@@ -1,0 +1,9 @@
+/* Provisional A logo; page colors inherit the original platform and workspace styles. */
+.brand{display:inline-flex;align-items:center;gap:10px;letter-spacing:0;font-size:27px;font-weight:650;line-height:1.25;white-space:nowrap}
+.brand img{display:block;width:34px;height:30px;flex-shrink:0}
+.brand-copy{display:flex;flex-direction:column;gap:5px}
+.workspace-nav a{color:var(--ink)}
+.brand .brand-caption{display:block;margin:0;padding:0;border:0;font-size:11px;font-weight:450;letter-spacing:0;color:var(--muted)}
+.site-footer .brand{font-size:23px}.site-footer .brand img{width:28px;height:25px}
+@media(max-width:1000px){.site-header .brand .brand-caption{display:none}}
+@media(max-width:760px){.brand{font-size:25px}.brand img{width:31px;height:28px}}

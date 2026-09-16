@@ -1,0 +1,79 @@
+# 자수정 — 자소서 첨삭 및 수정 플랫폼
+
+## 플랫폼 페이지 (2026-09-16)
+
+프로젝트 터미널에서 `npm start` 실행 후 `http://127.0.0.1:4317/`에 접속합니다. PowerShell 실행 정책으로 막히면 `npm.cmd start`를 사용하세요. 별도 빌드나 의존성 설치는 필요 없습니다.
+
+- `/`: 서비스 탐색 홈
+- `/services`: 키워드 검색 및 분야 필터 (URL에 검색 조건 유지)
+- `/services/resume`, `/services/job-fit`, `/services/interview`, `/services/complete`: 서비스 목적별 상세 안내
+- `/guide`: 이용 방법과 FAQ
+- `/login`: 로그인 화면 미리보기 (실제 계정 인증 미연결)
+- `/workspace`: 문장 다음 첨삭 작업실 (기존 화면은 이 주소로 이동)
+
+선택한 서비스는 작업실의 검토 요청 초깃값에 반영됩니다. 네 서비스는 같은 분석 API를 사용하며 검토 목적을 달리합니다. 입력과 결과는 자동 저장되지 않습니다. 페이지 이동 전 브라우저 경고를 제공하지만 저장 기능을 대신하지는 않습니다.
+
+`frontend/platform/`의 `catalog.js`는 서비스 데이터/필터, `platform.js`는 페이지별 콘텐츠, `platform.css`는 플랫폼 디자인, `page.html`은 공통 화면 골격입니다. 작업실은 기존 `frontend/index.html`과 기능별 모듈을 사용합니다. 서버는 허용된 페이지와 파일만 제공합니다.
+
+로그인 화면은 이메일 형식 검사와 비밀번호 보기/숨기기를 제공합니다. 제출하면 인증 미연결 안내를 표시하고 비밀번호를 지웁니다. 입력 내용은 서버로 전송하거나 저장하지 않습니다. 실제 비밀번호는 입력하지 마세요. 회원가입·계정 인증·결제·전문가 입점·주문 관리는 구현하지 않았습니다. 현재는 자수정 자체 서비스를 탐색하고 기존 작업실을 사용하는 로컬 플랫폼입니다. 실제 AI 분석은 별도 API 설정이 필요합니다.
+
+기존 로컬 시제품을 프론트엔드와 백엔드로 나누고, 각 폴더 안에서 기능별로 파일을 분리했습니다. 기존 시제품 원본은 그대로 보존했습니다.
+
+## 폴더와 파일 역할
+
+```text
+자수정(자소서 첨삭 및 수정 플랫폼)/
+├─ frontend/              # 브라우저에서 실행되는 화면과 기능
+│  ├─ index.html          # 화면 구조: 자료 입력, 결과 영역
+│  ├─ style.css           # 화면 디자인과 모바일 배치
+│  ├─ app.js              # 화면 초기화, 분석 요청, 연결 상태
+│  ├─ form.js             # 입력 읽기, 글자 수, 예시 입력
+│  ├─ api.js              # 백엔드 API 요청 및 오류 처리
+│  ├─ report.js           # 결과 표시, 이전 결과 표시, 저장 버튼
+│  ├─ sample.js           # 가상 공고·자소서·샘플 리포트
+│  ├─ download.js         # 텍스트 파일 다운로드
+│  └─ webmcp.js           # 브라우저 AI 도구의 샘플 표시 연결
+├─ backend/               # 로컬 서버에서 실행되는 기능
+│  ├─ main.mjs            # 서버 시작, 포트와 주소 설정
+│  ├─ app.mjs             # 화면 파일 제공, API 경로, 동의·중복 요청 검사
+│  ├─ validation.mjs      # 입력 형식과 글자 수 검증
+│  ├─ prompt.mjs          # 첨삭·면접 기준과 요청서 생성
+│  └─ review.mjs          # 외부 AI 호출과 응답 처리
+├─ tests/
+│  └─ app.test.mjs        # HTTP·입력 검증·AI 모의 응답·모듈 경로 검사
+├─ .env.example           # API 환경 설정 예시(실제 키 없음)
+├─ .gitignore             # 비밀 설정 등을 Git에서 제외
+├─ package.json           # 실행·테스트 명령
+├─ 시작.cmd               # Windows 서버 실행
+└─ README.md
+```
+
+사진처럼 기능별 파일을 각 폴더 바로 아래에 두었습니다. 아직 데이터 저장 기능이 없으므로 `database` 파일은 만들지 않았습니다. 기존 화면의 작업명 ‘문장 다음’은 이번 파일 분류 작업에서 변경하지 않았습니다.
+
+## 실행
+
+Node.js 22 이상이 필요합니다. 추가 패키지 설치는 필요하지 않습니다.
+
+1. `시작.cmd`를 더블클릭합니다. 또는 이 폴더에서 `npm.cmd start`를 실행합니다.
+2. 브라우저에서 http://127.0.0.1:4317 을 엽니다.
+3. 종료할 때 실행 창에서 Ctrl+C를 누릅니다.
+
+이미 이전 시제품이 4317 포트를 사용하고 있다면 해당 시제품을 종료한 다음 실행하세요. `index.html`을 직접 더블클릭하는 방식은 API와 모듈 경로가 연결되지 않으므로 사용하지 않습니다.
+
+테스트: `npm.cmd test` 또는 `node --test --test-isolation=none tests/app.test.mjs`.
+
+## 동작 흐름
+
+`시작.cmd → backend/main.mjs → backend/app.mjs → frontend/index.html → frontend/app.js`
+
+- 요청서: `frontend/app.js → api.js → /api/prompt → prompt.mjs → validation.mjs → download.js`
+- AI 분석: `frontend/app.js → api.js → /api/review → validation.mjs → review.mjs → report.js`
+- 가상 예시: `sample.js → form.js / report.js`
+
+## 설정 및 현재 한계
+
+실제 AI 분석에는 프로젝트 루트의 `.env`에 `OPENAI_API_KEY`, `OPENAI_MODEL` 설정이 필요합니다. `.env.example`을 참고하세요. 기존 비밀 설정은 복사하지 않았습니다.
+
+실제 AI 호출·과금은 이번 작업에 포함하지 않습니다. 테스트의 AI 응답은 모의 응답입니다. 결제, 데이터베이스, 공개 배포, 자율 유지보수는 아직 구현되지 않았습니다.
+
+공개 배포용이 아닌 로컬 시제품입니다. 기존 정적 배포용 `.openai/hosting.json`은 새 폴더 구조의 서버를 배포할 수 없으므로 복사하지 않았습니다.
