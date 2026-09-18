@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env backend/main.mjs",
-    "test": "node --test --test-isolation=none tests/app.test.mjs"
+    "test": "node tests/app.test.mjs"
   },
   "engines": {
     "node": ">=22"

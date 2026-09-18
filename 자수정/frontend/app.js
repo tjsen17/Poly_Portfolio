@@ -29,7 +29,7 @@ $('form').addEventListener('submit',async event=>{
   if(!$('consent').checked){$('message').textContent='외부 AI 전송 동의를 선택해 주세요.';$('consent').focus();return;}
   const input = data();const controls=[...$('form').elements,$('sample')];controls.forEach(el=>el.disabled=true);
   $('analyze').textContent='분석 중…';$('message').textContent='공고와 원문을 분석하고 있습니다. 최대 60초 정도 걸릴 수 있습니다.';
-  try{const result=await post('/api/review',input);show(result.text,'AI 생성 · 검수 필요');}
+  try{const result=await post('/api/review',input);show(result.text,'AI 생성 · 검수 필요',input);}
   catch(error){$('message').textContent=error.message;}
   finally{controls.forEach(el=>el.disabled=false);$('analyze').textContent='진단 · 면접 질문 만들기';}
 });

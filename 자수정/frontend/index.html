@@ -3,7 +3,7 @@
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>문장 다음 — 자소서와 면접 작업실</title><meta name="description" content="내 경험을 담은 자소서를 다듬고, 그 다음 면접을 준비하는 작업실."><link rel="stylesheet" href="/style.css"><link rel="icon" type="image/svg+xml" href="/brand/symbol.svg"><link rel="stylesheet" href="/brand/brand.css"><script type="module" src="/app.js"></script></head>
 <body>
 <a class="skip-link" href="#form">지원 자료 입력으로 이동</a>
-<header><a href="/" class="brand"><img src="/brand/symbol.svg" width="34" height="30" alt=""><div class="brand-copy">자수정<span class="brand-caption">문장 다음 작업실</span></div></a><nav class="workspace-nav" aria-label="주 메뉴"><a href="/services">서비스 찾기</a><a href="/guide">이용 가이드</a><a href="/login">로그인</a><span class="badge">로컬 체험</span></nav></header>
+<header><a href="/" class="brand"><img src="/brand/symbol.svg" width="34" height="30" alt=""><div class="brand-copy">자수정<span class="brand-caption">문장 다음 작업실</span></div></a><nav class="workspace-nav" aria-label="주 메뉴"><a href="/services">서비스 찾기</a><a href="/board">게시판</a><a href="/guide">이용 가이드</a><a href="/login">로그인</a><span class="badge">로컬 체험</span></nav></header>
 <main>
 <div class="intro"><div><p class="workspace-label" id="selected-service">자기소개서 첨삭 노트</p><h1>내 경험이 잘 읽히도록.</h1><p>공고와 자소서를 나란히 살펴보고, 면접에서 이어질 질문까지 준비하세요.</p></div><a class="jump-link" href="#report-title">첨삭 예시 먼저 보기 ↗</a></div>
 <div class="workspace">
@@ -15,7 +15,7 @@
 <label class="consent"><input id="consent" type="checkbox"><span>분석할 자료를 외부 AI(OpenAI)에 전송하는 데 동의합니다. AI 서비스의 데이터 처리 정책이 적용됩니다.</span></label>
 <div class="actions"><button id="analyze" type="submit" disabled>AI 연결 확인 중</button><button id="prompt" type="button" class="secondary">첨삭 요청서 받기</button></div>
 <p id="connection" class="note" role="status">연결 상태를 확인하고 있습니다.</p>
-<p class="note">이 시제품은 입력·결과를 별도 파일이나 브라우저 저장소에 저장하지 않습니다. 새로고침 전에 필요한 자료를 내려받으세요.</p>
+<p class="note">입력·결과는 자동 저장되지 않습니다. 추가 첨삭 요청을 선택하면 이 탭에 임시 보관되며, 게시판 등록 시 서버에 저장됩니다. 새로고침 전에 필요한 자료를 내려받으세요.</p>
 </form></section>
 <section class="panel report-panel" aria-labelledby="report-title"><div class="section-title"><h2 id="report-title">첨삭 · 면접 리포트</h2><span class="badge" id="report-state">준비 전</span></div>
 <div id="empty">
@@ -27,7 +27,7 @@
 <div class="interview-note"><span>이 경험으로 준비할 면접 질문</span><p>“체크리스트에는 어떤 항목을 넣었나요?”</p><p class="note">본인이 결정한 내용과 그 이유를 함께 설명해 보세요.</p></div>
 <button type="button" id="preview" class="secondary">가상 샘플 리포트 보기</button><p class="note">위 문장과 리포트는 가상 예시입니다. 현재 입력을 분석한 결과가 아닙니다.</p>
 </div>
-<p id="message" role="status" aria-live="polite"></p><pre id="report" hidden></pre><button id="download" class="secondary" type="button" hidden>리포트 다운로드</button>
+<p id="message" role="status" aria-live="polite"></p><pre id="report" hidden></pre><button id="request-review" type="button" hidden>운영자 추가 첨삭 요청하기</button><p class="note">추가 첨삭 요청 시 원문과 AI 결과를 이 탭에 임시 보관하여 요청서로 옮깁니다. 등록 전 수정할 수 있으며, 등록한 자료는 게시판에 공개됩니다.</p><button id="download" class="secondary" type="button" hidden>리포트 다운로드</button>
 </section></div>
 <footer>문장 다음 · 작업명 <span>합격을 예측하지 않습니다. 제출 전 사실과 표현은 본인이 확인하세요.</span></footer>
 </main></body></html>

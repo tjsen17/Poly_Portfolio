@@ -1,3 +1,4 @@
+import {mountBoard} from './board.js';
 import {services, categories, findServices} from './catalog.js';
 
 const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -43,6 +44,7 @@ function login() {
 }
 const selected=services.find(item=>path===`/services/${item.id}`);
 content.innerHTML=path==='/'?home():path==='/services'?listing():path==='/guide'?guide():path==='/login'?login():selected?detail(selected):'<h1>페이지를 찾을 수 없습니다.</h1><a href="/">홈으로</a>';
+if (path==='/board') mountBoard(content);
 if (path==='/login') {
   const password=document.getElementById('login-password'), toggle=document.getElementById('password-toggle');
   toggle.addEventListener('click',()=>{

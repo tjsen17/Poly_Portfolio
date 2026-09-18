@@ -127,3 +127,88 @@ test('sample form keeps selected focus and does not overwrite edited input when 
   if(savedConfirm===undefined)delete globalThis.confirm;else globalThis.confirm=savedConfirm;
  }
 });
+
+test('board persists posts across restarts, validates inputs and preserves concurrent writes', async () => {
+ const {mkdtemp, rm} = await import('node:fs/promises');
+ const {tmpdir} = await import('node:os');
+ const {join} = await import('node:path');
+ const directory = await mkdtemp(join(tmpdir(),'jasujeong-board-'));
+ const boardFile = join(directory,'posts.json');
+ const input = {title:'첫 질문 <script>',author:'준비생',category:'질문',body:'자소서 경험을 어떻게 정리하나요?'};
+ try {
+  await withServer({boardFile},async base=>{
+   assert.equal((await fetch(base+'/board?write=1')).status,200);
+   assert.equal((await fetch(base+'/platform/board.js')).status,200);
+   assert.deepEqual((await (await fetch(base+'/api/posts')).json()).posts,[]);
+   for(const invalid of [null, {...input,title:' '}, {...input,category:'공지'}, {...input,body:'가'.repeat(10001)}]) assert.equal((await post(base,'/api/posts',invalid)).status,400);
+   assert.equal((await post(base,'/api/posts',input,'https://other.example')).status,403);
+   const responses = await Promise.all([post(base,'/api/posts',input),post(base,'/api/posts',{...input,title:'두 번째 글'})]);
+   assert.ok(responses.every(response=>response.status===201));
+   const posts = (await (await fetch(base+'/api/posts')).json()).posts;
+   assert.equal(posts.length,2);assert.equal(new Set(posts.map(item=>item.id)).size,2);
+   assert.ok(posts.some(item=>item.title===input.title));
+   assert.equal((await fetch(base+'/data/posts.json')).status,404);
+   const request={...input,category:'추가 첨삭 요청',essay:'원문',aiReport:'AI 결과',publicConsent:true,status:'완료'};
+   for(const invalid of [{...request,publicConsent:false},{...request,essay:''},{...request,aiReport:'가'.repeat(20001)}]) assert.equal((await post(base,'/api/posts',invalid)).status,400);
+   const response=await post(base,'/api/posts',request);
+   assert.equal(response.status,201);
+   const saved=(await response.json()).post;
+   assert.equal(saved.status,'접수 대기');assert.equal(saved.essay,'원문');assert.equal(saved.aiReport,'AI 결과');
+  });
+  await withServer({boardFile},async base=>{assert.equal((await (await fetch(base+'/api/posts')).json()).posts.length,3);});
+ } finally {await rm(directory,{recursive:true,force:true});}
+});
+
+
+test('review request uses the analyzed snapshot and hides the action for sample reports', async () => {
+ const {show,setupReport,markReportStale}=await import('../frontend/report.js');
+ const names=['document','sessionStorage','location'];
+ const previous=names.map(name=>Object.getOwnPropertyDescriptor(globalThis,name));
+ const elements=Object.fromEntries(['empty','report','download','report-state','message','request-review','preview'].map(id=>[id,{hidden:true,textContent:'',listeners:{},addEventListener(type,fn){this.listeners[type]=fn;}}]));
+ let saved, destination;
+ try {
+  globalThis.document={getElementById:id=>elements[id]};
+  globalThis.sessionStorage={setItem(key,value){saved=JSON.parse(value);}};
+  globalThis.location={assign(url){destination=url;}};
+  setupReport();
+  const input={essay:'분석 당시 원문'};
+  show('실제 AI 결과','AI 생성',input);
+  input.essay='변경한 원문';markReportStale();
+  assert.equal(elements['request-review'].hidden,false);
+  elements['request-review'].listeners.click();
+  assert.deepEqual(saved,{essay:'분석 당시 원문',aiReport:'실제 AI 결과'});
+  assert.match(destination,/write=1/);
+  show('가상 결과','가상 샘플');
+  assert.equal(elements['request-review'].hidden,true);
+ } finally { names.forEach((name,index)=>{if(previous[index])Object.defineProperty(globalThis,name,previous[index]);else delete globalThis[name];}); }
+});
+
+test('ordinary post form offers review requests and switches fields without losing input', async () => {
+ const {mountBoard}=await import('../frontend/platform/board.js');
+ const names=['document','location','sessionStorage','window'];
+ const previous=names.map(name=>Object.getOwnPropertyDescriptor(globalThis,name));
+ const field=()=>({value:'',checked:false,listeners:{},addEventListener(type,fn){this.listeners[type]=fn;}});
+ const elements=Object.fromEntries(['category','author','title','body','essay','aiReport','publicConsent'].map(name=>[name,field()]));
+ elements.category.value='자유';elements.title.value='작성 중 제목';elements.body.value='작성 중 내용';
+ const heading={},button={},fields={},label={},view={innerHTML:''};
+ const form={elements,addEventListener(){},querySelector:selector=>selector==='h2'?heading:button};
+ try {
+  globalThis.location={search:'?write=1'};
+  globalThis.window={addEventListener(){}};
+  globalThis.sessionStorage={getItem:()=>JSON.stringify({essay:'분석 원문',aiReport:'분석 결과'})};
+  globalThis.document={title:'',getElementById:id=>({'board-view':view,'post-form':form,'review-fields':fields,'body-label':label}[id])};
+  await mountBoard({innerHTML:''});
+  assert.match(view.innerHTML,/<option[^>]*>추가 첨삭 요청<\/option>/);
+  assert.equal(fields.disabled,true);
+  elements.category.value='추가 첨삭 요청';elements.category.listeners.change();
+  assert.equal(fields.hidden,false);assert.equal(fields.disabled,false);
+  assert.equal(button.textContent,'추가 첨삭 요청 등록');
+  assert.equal(elements.essay.value,'분석 원문');
+  elements.essay.value='수정한 원문';
+  elements.category.value='질문';elements.category.listeners.change();
+  assert.equal(fields.disabled,true);
+  elements.category.value='추가 첨삭 요청';elements.category.listeners.change();
+  assert.equal(elements.essay.value,'수정한 원문');
+  assert.equal(elements.title.value,'작성 중 제목');assert.equal(elements.body.value,'작성 중 내용');
+ } finally {names.forEach((name,index)=>{if(previous[index])Object.defineProperty(globalThis,name,previous[index]);else delete globalThis[name];});}
+});

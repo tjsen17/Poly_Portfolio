@@ -4,6 +4,7 @@ import {review} from './review.mjs';
 import {prompt} from './prompt.mjs';
 import {validate} from './validation.mjs';
 import {services} from '../frontend/platform/catalog.js';
+import {createBoard} from './board.mjs';
 
 const assets = {
   "/brand/symbol.svg": ["brand/symbol.svg", "image/svg+xml"],
@@ -46,13 +47,14 @@ const assets = {
     "text/javascript; charset=utf-8"
   ]
 };
-for (const path of ['/', '/services', '/guide', '/login', ...services.map(item=>`/services/${item.id}`)]) {
+for (const path of ['/', '/board', '/services', '/guide', '/login', ...services.map(item=>`/services/${item.id}`)]) {
   assets[path] = ['platform/page.html', 'text/html; charset=utf-8'];
 }
-for (const file of ['platform.js', 'catalog.js', 'platform.css']) {
+for (const file of ['platform.js', 'board.js', 'catalog.js', 'platform.css']) {
   assets[`/platform/${file}`] = [`platform/${file}`, file.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8'];
 }
-export function createApp({key = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL, fetcher = fetch} = {}) {
+export function createApp({key = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL, fetcher = fetch, boardFile} = {}) {
+  const board = createBoard(boardFile);
   // ponytail: one local request at a time; use authenticated per-user quotas before hosting.
   let busy = false;
   return http.createServer(async (req,res) => {
@@ -70,16 +72,21 @@ export function createApp({key = process.env.OPENAI_API_KEY, model = process.env
         return reply(200,await readFile(new URL(`../frontend/${file}`,import.meta.url)),type);
       }
       if(req.method === 'GET' && req.url === '/api/status') return reply(200,{configured:Boolean(key && model)});
-      if(req.method !== 'POST' || !['/api/review','/api/prompt'].includes(req.url)) return reply(404,{error:'페이지를 찾을 수 없습니다.'});
+      if(req.method === 'GET' && pathname === '/api/posts') return reply(200,{posts:await board.list()});
+      if(req.method !== 'POST' || !['/api/review','/api/prompt','/api/posts'].includes(req.url)) return reply(404,{error:'페이지를 찾을 수 없습니다.'});
       if(req.headers.origin !== `http://${expectedHost}` || !req.headers['content-type']?.startsWith('application/json')) return reply(403,{error:'이 화면에서 다시 요청해 주세요.'});
       let size = 0; const chunks = [];
       for await(const chunk of req) {
         size += chunk.length;
-        if(size > 100000) { reply(413,{error:'입력 용량이 너무 큽니다.'}); return; }
+        if(size > (req.url === '/api/posts' ? 300000 : 100000)) { reply(413,{error:'입력 용량이 너무 큽니다.'}); return; }
         chunks.push(chunk);
       }
       let data;
-      try {data=JSON.parse(Buffer.concat(chunks).toString());validate(data);} catch(error) {return reply(400,{error:error instanceof SyntaxError ? '입력 형식이 올바르지 않습니다.' : error.message});}
+      try {data=JSON.parse(Buffer.concat(chunks).toString());if(req.url !== '/api/posts')validate(data);} catch(error) {return reply(400,{error:error instanceof SyntaxError ? '입력 형식이 올바르지 않습니다.' : error.message});}
+      if(req.url === '/api/posts') {
+        try {return reply(201,{post:await board.add(data)});}
+        catch(error) {if(error instanceof TypeError)return reply(400,{error:error.message});throw error;}
+      }
       if(req.url === '/api/prompt') return reply(200,{text:prompt(data)});
       if(data.consent !== true) return reply(400,{error:'외부 AI 전송 동의가 필요합니다.'});
       if(!key || !model) return reply(503,{error:'AI 연결 전입니다. API 키와 모델 설정이 필요합니다.'});
