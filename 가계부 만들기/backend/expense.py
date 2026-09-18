@@ -28,3 +28,23 @@ def add_expense(expense_date, place, amount, category):
 
     cursor.close()
     conn.close()
+
+
+def get_expenses():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    sql = """
+    SELECT *
+    FROM expenses
+    ORDER BY id DESC
+    """
+
+    cursor.execute(sql)
+
+    expenses = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return expenses

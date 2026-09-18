@@ -1,5 +1,4 @@
 import os
-
 import mysql.connector
 
 
@@ -14,7 +13,9 @@ def create_database():
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
 
-    cursor.execute("CREATE DATABASE IF NOT EXISTS budget_db")
+    cursor.execute(
+        "CREATE DATABASE IF NOT EXISTS budget_db"
+    )
 
     cursor.close()
     conn.close()
@@ -46,5 +47,6 @@ def create_table():
     cursor.execute(sql)
 
     conn.commit()
+
     cursor.close()
     conn.close()
