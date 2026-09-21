@@ -1,3 +1,4 @@
+import {mountPrivate,setupAccountNav} from './private.js';
 import {mountBoard} from './board.js';
 import {services, categories, findServices} from './catalog.js';
 
@@ -33,33 +34,16 @@ function guide() {
   return `<div class="page-intro"><span class="eyebrow">자수정 사용 안내</span><h1>내 경험은 그대로.<br>전달하는 방법을 다듬으세요.</h1><p>서비스 선택부터 결과 확인까지, 처음 시작하는 분을 위한 안내입니다.</p></div>${steps}<section class="guide-grid"><div><h2>입력 전에 준비해 주세요</h2><ul class="check-list"><li>지원할 직무의 채용 공고</li><li>자소서 문항과 본인이 작성한 답변</li><li>강조하고 싶은 경험이나 점검할 부분</li></ul><a class="button" href="/services">내게 맞는 서비스 찾기</a></div><div><h2>자주 묻는 질문</h2>${[
     ['서비스마다 다른 도구인가요?','같은 첨삭 작업실을 사용합니다. 선택한 서비스에 맞는 검토 요청이 미리 입력되고, 직접 바꿀 수 있습니다.'],
     ['지금 바로 AI 첨삭을 받을 수 있나요?','운영자가 API 키와 모델을 설정한 환경에서 가능합니다. 현재 연결 상태는 작업실에서 확인할 수 있습니다. 미설정 상태에서는 가상 샘플을 보거나 첨삭 요청서를 다운로드할 수 있습니다.'],
-    ['입력한 내용은 저장되나요?','이 로컬 시제품은 자소서와 결과를 별도 파일이나 브라우저 저장소에 자동 저장하지 않습니다. 페이지를 이동하거나 새로고침하기 전에 필요한 결과를 내려받으세요.'],
+    ['입력한 내용은 저장되나요?','작업실 입력은 자동 저장되지 않습니다. 비공개 첨삭을 접수하면 원문·요청사항·리포트가 서버에 저장되며, 요청한 고객과 운영자만 확인할 수 있습니다.'],
     ['자료가 외부로 전송되나요?','실제 AI 분석을 누르면 동의한 자료가 OpenAI로 전송됩니다. 가상 샘플 보기와 첨삭 요청서 다운로드는 외부 AI 전송 없이 동작합니다.'],
-    ['전문가 상담이나 결제도 가능한가요?','현재 버전은 자수정 자체 도구를 체험하는 로컬 플랫폼입니다. 전문가 상담, 회원 계정, 결제는 아직 제공하지 않습니다.']
+    ['전문가 상담이나 결제도 가능한가요?','회원가입 후 비공개 첨삭을 접수하면 운영자가 검토합니다. 진행 상태와 최종 리포트는 마이페이지에서 확인할 수 있습니다. 결제는 아직 제공하지 않습니다.']
   ].map(([q,a])=>`<details><summary>${q}</summary><p>${a}</p></details>`).join('')}</div></section>`;
 }
-function login() {
-  document.title='로그인 | 자수정';
-  return `<section class="login-layout"><div class="login-intro"><span class="eyebrow">자수정 · 나다운 지원의 시작</span><h1>다음 기회를 준비하는<br>나만의 작업실.</h1><p>내 경험을 정리하고, 더 나은 문장과 답변으로.<br>자수정과 차근차근 준비해 보세요.</p><a class="text-link" href="/services">먼저 서비스 둘러보기 →</a></div><div class="login-card"><h2>로그인</h2><p class="muted">이메일로 시작하세요.</p><p id="login-notice" class="login-notice">화면 미리보기입니다. 실제 인증은 아직 연결되지 않았습니다. 실제 비밀번호는 입력하지 마세요.</p><form id="login-form" aria-describedby="login-notice"><label for="login-email">이메일</label><input id="login-email" type="email" placeholder="name@example.com" autocomplete="off" maxlength="254" required><label for="login-password">비밀번호</label><div class="password-field"><input id="login-password" type="password" autocomplete="off" placeholder="테스트용 비밀번호" maxlength="128" required><button id="password-toggle" type="button" aria-label="비밀번호 표시" aria-pressed="false">보기</button></div><button class="login-submit" type="submit">로그인</button><p id="login-message" role="status" aria-live="polite"></p></form><div class="login-alternative"><p>아직 계정이 없어도 둘러볼 수 있어요.</p><a class="text-link" href="/workspace">로그인 없이 작업실 체험하기 →</a></div></div></section>`;
-}
 const selected=services.find(item=>path===`/services/${item.id}`);
-content.innerHTML=path==='/'?home():path==='/services'?listing():path==='/guide'?guide():path==='/login'?login():selected?detail(selected):'<h1>페이지를 찾을 수 없습니다.</h1><a href="/">홈으로</a>';
+content.innerHTML=path==='/'?home():path==='/services'?listing():path==='/guide'?guide():selected?detail(selected):'<h1>페이지를 찾을 수 없습니다.</h1><a href="/">홈으로</a>';
 if (path==='/board') mountBoard(content);
-if (path==='/login') {
-  const password=document.getElementById('login-password'), toggle=document.getElementById('password-toggle');
-  toggle.addEventListener('click',()=>{
-    const visible=password.type==='password';
-    password.type=visible?'text':'password';
-    toggle.textContent=visible?'숨기기':'보기';
-    toggle.setAttribute('aria-label',visible?'비밀번호 숨기기':'비밀번호 표시');
-    toggle.setAttribute('aria-pressed',String(visible));
-  });
-  document.getElementById('login-form').addEventListener('submit',event=>{
-    event.preventDefault();
-    password.value='';
-    document.getElementById('login-message').textContent='아직 로그인할 수 없습니다. 인증 기능은 준비 중이며 입력 내용은 서버로 전송하거나 저장하지 않았습니다.';
-  });
-}
+if (['/login','/signup','/my','/request','/operator'].includes(path)) mountPrivate(content);
+setupAccountNav();
 for(const link of document.querySelectorAll('.site-header nav a')) {
   if(path===link.getAttribute('href') || (selected&&link.getAttribute('href')==='/services'))link.setAttribute('aria-current','page');
 }

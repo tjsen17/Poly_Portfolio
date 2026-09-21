@@ -151,11 +151,9 @@ test('board persists posts across restarts, validates inputs and preserves concu
    const request={...input,category:'추가 첨삭 요청',essay:'원문',aiReport:'AI 결과',publicConsent:true,status:'완료'};
    for(const invalid of [{...request,publicConsent:false},{...request,essay:''},{...request,aiReport:'가'.repeat(20001)}]) assert.equal((await post(base,'/api/posts',invalid)).status,400);
    const response=await post(base,'/api/posts',request);
-   assert.equal(response.status,201);
-   const saved=(await response.json()).post;
-   assert.equal(saved.status,'접수 대기');assert.equal(saved.essay,'원문');assert.equal(saved.aiReport,'AI 결과');
+   assert.equal(response.status,400);
   });
-  await withServer({boardFile},async base=>{assert.equal((await (await fetch(base+'/api/posts')).json()).posts.length,3);});
+  await withServer({boardFile},async base=>{assert.equal((await (await fetch(base+'/api/posts')).json()).posts.length,2);});
  } finally {await rm(directory,{recursive:true,force:true});}
 });
 
@@ -177,38 +175,18 @@ test('review request uses the analyzed snapshot and hides the action for sample 
   assert.equal(elements['request-review'].hidden,false);
   elements['request-review'].listeners.click();
   assert.deepEqual(saved,{essay:'분석 당시 원문',aiReport:'실제 AI 결과'});
-  assert.match(destination,/write=1/);
+  assert.equal(destination,'/request');
   show('가상 결과','가상 샘플');
   assert.equal(elements['request-review'].hidden,true);
  } finally { names.forEach((name,index)=>{if(previous[index])Object.defineProperty(globalThis,name,previous[index]);else delete globalThis[name];}); }
 });
 
-test('ordinary post form offers review requests and switches fields without losing input', async () => {
+test('old public review links redirect to private intake', async () => {
  const {mountBoard}=await import('../frontend/platform/board.js');
- const names=['document','location','sessionStorage','window'];
- const previous=names.map(name=>Object.getOwnPropertyDescriptor(globalThis,name));
- const field=()=>({value:'',checked:false,listeners:{},addEventListener(type,fn){this.listeners[type]=fn;}});
- const elements=Object.fromEntries(['category','author','title','body','essay','aiReport','publicConsent'].map(name=>[name,field()]));
- elements.category.value='자유';elements.title.value='작성 중 제목';elements.body.value='작성 중 내용';
- const heading={},button={},fields={},label={},view={innerHTML:''};
- const form={elements,addEventListener(){},querySelector:selector=>selector==='h2'?heading:button};
- try {
-  globalThis.location={search:'?write=1'};
-  globalThis.window={addEventListener(){}};
-  globalThis.sessionStorage={getItem:()=>JSON.stringify({essay:'분석 원문',aiReport:'분석 결과'})};
-  globalThis.document={title:'',getElementById:id=>({'board-view':view,'post-form':form,'review-fields':fields,'body-label':label}[id])};
-  await mountBoard({innerHTML:''});
-  assert.match(view.innerHTML,/<option[^>]*>추가 첨삭 요청<\/option>/);
-  assert.equal(fields.disabled,true);
-  elements.category.value='추가 첨삭 요청';elements.category.listeners.change();
-  assert.equal(fields.hidden,false);assert.equal(fields.disabled,false);
-  assert.equal(button.textContent,'추가 첨삭 요청 등록');
-  assert.equal(elements.essay.value,'분석 원문');
-  elements.essay.value='수정한 원문';
-  elements.category.value='질문';elements.category.listeners.change();
-  assert.equal(fields.disabled,true);
-  elements.category.value='추가 첨삭 요청';elements.category.listeners.change();
-  assert.equal(elements.essay.value,'수정한 원문');
-  assert.equal(elements.title.value,'작성 중 제목');assert.equal(elements.body.value,'작성 중 내용');
- } finally {names.forEach((name,index)=>{if(previous[index])Object.defineProperty(globalThis,name,previous[index]);else delete globalThis[name];});}
+ const names=['document','location'];const previous=names.map(name=>Object.getOwnPropertyDescriptor(globalThis,name));
+ let destination;
+ try{globalThis.document={};globalThis.location={search:'?write=1&category='+encodeURIComponent('추가 첨삭 요청'),replace:url=>destination=url};await mountBoard({});assert.equal(destination,'/request');}
+ finally{names.forEach((name,index)=>{if(previous[index])Object.defineProperty(globalThis,name,previous[index]);else delete globalThis[name];});}
 });
+
+await import('./private.test.mjs');

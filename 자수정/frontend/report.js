@@ -13,7 +13,7 @@ $('request-review').addEventListener('click',()=>{
   if (!reviewedInput) return;
   try {
     sessionStorage.setItem('jasujeong-review-draft',JSON.stringify({essay:reviewedInput.essay,aiReport:reportText}));
-    location.assign('/board?write=1&category=추가%20첨삭%20요청');
+    location.assign('/request');
   } catch { $('message').textContent='요청서로 옮기지 못했습니다. 리포트를 다운로드한 뒤 게시판에서 추가 첨삭 요청을 작성해 주세요.'; }
 });
 $('preview').addEventListener('click',()=>show(sampleReport,'가상 샘플'));

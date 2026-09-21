@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env backend/main.mjs",
-    "test": "node tests/app.test.mjs"
+    "test": "node tests/app.test.mjs",
+    "create-admin": "node backend/create-admin.mjs"
   },
   "engines": {
     "node": ">=22"
