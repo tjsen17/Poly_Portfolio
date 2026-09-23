@@ -1,4 +1,4 @@
-import {sampleReport} from './sample.js';
+import {sampleReports} from './sample.js';
 import {download} from './download.js';
 
 const $ = id => document.getElementById(id);
@@ -8,7 +8,7 @@ export function show(text,state,input=null){reportText=text;reviewedInput=input 
 export function markReportStale() {
   if(reportText) $('report-state').textContent = '이전 결과 · 입력 변경됨';
 }
-export function setupReport() {
+export function setupReport(service='resume') {
 $('request-review').addEventListener('click',()=>{
   if (!reviewedInput) return;
   try {
@@ -16,6 +16,6 @@ $('request-review').addEventListener('click',()=>{
     location.assign('/request');
   } catch { $('message').textContent='요청서로 옮기지 못했습니다. 리포트를 다운로드한 뒤 게시판에서 추가 첨삭 요청을 작성해 주세요.'; }
 });
-$('preview').addEventListener('click',()=>show(sampleReport,'가상 샘플'));
+$('preview').addEventListener('click',()=>show(sampleReports[service] || sampleReports.resume,'가상 샘플'));
 $('download').addEventListener('click',()=>download(reportText,'첨삭-리포트.txt'));
 }

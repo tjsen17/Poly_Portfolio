@@ -48,6 +48,7 @@ const assets = {
     "text/javascript; charset=utf-8"
   ]
 };
+for (const id of services.map(item=>item.id)) assets[`/workspace/${id}`] = ['index.html','text/html; charset=utf-8'];
 for (const path of ['/', '/board', '/services', '/guide', '/login', '/signup', '/my', '/request', '/operator', ...services.map(item=>`/services/${item.id}`)]) {
   assets[path] = ['platform/page.html', 'text/html; charset=utf-8'];
 }

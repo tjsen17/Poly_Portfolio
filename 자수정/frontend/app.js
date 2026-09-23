@@ -8,14 +8,42 @@ import {services} from './platform/catalog.js';
 
 const $ = id => document.getElementById(id);
 let configured = false;
-const selectedService = services.find(item => item.id === new URLSearchParams(location.search).get('service'));
+const routeService = location.pathname.match(/^\/workspace\/([^/]+)$/)?.[1];
+const selectedService = services.find(item => item.id === (routeService || new URLSearchParams(location.search).get('service'))) || services[0];
+const workspace = selectedService.workspace;
 setupForm(selectedService?.focus);
-setupReport();
+setupReport(selectedService.id);
 setupWebMCP();
-if (selectedService) {
-  $('focus').value = selectedService.focus;
-  $('selected-service').textContent = `선택한 서비스: ${selectedService.title}`;
-}
+$('focus').value = selectedService.focus;
+$('service').value = selectedService.id;
+$('selected-service').textContent = `${selectedService.label} · 자수정`;
+$('workspace-title').textContent = workspace.title;
+$('workspace-description').textContent = workspace.description;
+$('form-description').textContent = workspace.description;
+$('job-label').textContent = workspace.sourceLabel;
+$('job-hint').textContent = workspace.sourceHint;
+$('job').placeholder = workspace.sourcePlaceholder;
+$('essay-label').textContent = workspace.contentLabel;
+$('essay').placeholder = workspace.contentPlaceholder;
+$('focus-label').textContent = workspace.focusLabel;
+$('focus').placeholder = workspace.focusPlaceholder;
+$('report-title').textContent = workspace.reportTitle;
+$('empty-title').innerHTML = workspace.emptyTitle.replace('\n','<br>');
+$('before-label').textContent = workspace.beforeLabel;
+$('before-text').textContent = workspace.before;
+$('after-label').textContent = workspace.afterLabel;
+$('after-text').textContent = workspace.after;
+$('why-text').textContent = workspace.why;
+$('question-text').textContent = `“${workspace.question}”`;
+$('upload-field').hidden = !workspace.upload;
+document.title = `${selectedService.label} 작업실 | 자수정`;
+if (workspace.upload) $('resume-file').addEventListener('change',async event=>{
+  const file=event.target.files[0];if(!file)return;
+  if(file.size>1024*1024||(!file.name.toLowerCase().endsWith('.txt')&&file.type!=='text/plain')){$('file-note').textContent='.txt 파일만 최대 1MB까지 불러올 수 있습니다.';event.target.value='';return;}
+  const text=await file.text();if(text.trim().length<50||text.length>12000){$('file-note').textContent='자소서 내용은 50~12,000자로 준비해 주세요.';event.target.value='';return;}
+  if($('essay').value&&!confirm('현재 자소서 내용을 파일 내용으로 바꿀까요?')){event.target.value='';return;}
+  $('essay').value=text;$('essay').dispatchEvent(new Event('input',{bubbles:true}));$('file-note').textContent=`${file.name} 내용을 불러왔습니다.`;
+});
 // Warn before leaving an unsaved form; no private input is persisted.
 window.addEventListener('beforeunload', event => {
   if ($('job').value || $('essay').value || ($('focus').value && $('focus').value !== (selectedService?.focus || '')) || !$('report').hidden) {

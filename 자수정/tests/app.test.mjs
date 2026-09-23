@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createApp} from '../backend/app.mjs';
 import {review} from '../backend/review.mjs';
+import {prompt} from '../backend/prompt.mjs';
 import {validate} from '../backend/validation.mjs';
 import {readFile} from 'node:fs/promises';
 import {services, findServices} from '../frontend/platform/catalog.js';
@@ -90,7 +91,7 @@ test('platform pages support direct links and queries without exposing arbitrary
    const response=await fetch(base+route);assert.equal(response.status,200,route);
    assert.match(await response.text(), /src="\/platform\/platform.js"/);
   }
-  for(const route of ['/workspace?service=interview','/platform/platform.js','/platform/catalog.js','/platform/platform.css']) assert.equal((await fetch(base+route)).status,200,route);
+  for(const route of ['/workspace?service=interview',...services.map(s=>`/workspace/${s.id}`),'/platform/platform.js','/platform/catalog.js','/platform/platform.css']) assert.equal((await fetch(base+route)).status,200,route);
   for(const route of ['/services/missing','/platform/../../.env','/constructor','/toString','/platform/page.html']) assert.equal((await fetch(base+route)).status,404,route);
  });
 });
@@ -102,6 +103,16 @@ test('service filters combine keywords and categories and handle no matches', ()
  assert.equal(findServices('<script>alert(1)</script>').length,0);
  assert.equal(findServices('','없는분야').length,0);
  assert.equal(new Set(services.map(s=>s.id)).size,services.length);
+ assert.equal(new Set(services.map(s=>s.workspace.title)).size,services.length);
+ assert.equal(new Set(services.map(s=>s.workspace.reportTitle)).size,services.length);
+ assert.ok(services.every(s=>s.workspace.sourceLabel&&s.workspace.contentLabel&&s.workspace.focusLabel));
+ assert.equal(services.find(s=>s.id==='interview').workspace.upload,true);
+});
+
+test('each workspace produces a service-specific request', () => {
+ const expected={resume:'자소서 첨삭 리포트','job-fit':'직무 연결 리포트',interview:'예상 질문 5개',complete:'통합 점검 리포트'};
+ for(const [service,text] of Object.entries(expected))assert.match(prompt({...data,service}),new RegExp(text));
+ assert.throws(()=>validate({...data,service:'unknown'}),/서비스 종류/);
 });
 
 test('sample form keeps selected focus and does not overwrite edited input when cancelled', () => {

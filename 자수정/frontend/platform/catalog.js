@@ -1,17 +1,21 @@
 export const categories = ['전체', '자소서', '직무 분석', '면접'];
 export const services = [
-  {id:'resume', category:'자소서', title:'경험이 드러나는 자소서 첨삭', brief:'추상적인 표현은 덜고, 내가 한 일을 구체적으로.', label:'문장 첨삭', motif:'01', tone:'sage',
+  {id:'resume', category:'자소서', title:'경험이 드러나는 자소서 첨삭', brief:'추상적인 표현은 덜고, 내 경험을 구체적으로.', label:'문장 첨삭', motif:'01', tone:'sage', serviceType:'자소서 AI 기반 첨삭 서비스',
     focus:'자소서의 추상적인 표현을 실제 행동 중심으로 다듬고, 문장별 수정 이유를 설명해 주세요. 제시되지 않은 사실은 추가하지 마세요.',
-    audience:'경험은 있지만 문장으로 풀어내기 어려운 분', outputs:['원문에 근거한 핵심 진단','수정 제안과 바꾼 이유','추가로 확인해야 할 사실'], preparation:'지원 공고, 자소서 문항과 답변', sample:'꼼꼼합니다 → 어떤 일을 어떻게 확인했나요?'},
+    audience:'경험은 있지만 문장으로 풀어내기 어려운 분', outputs:['원문에 근거한 핵심 진단','수정 제안과 바꾼 이유','짚어보면 좋은 포인트'], preparation:'지원 공고, 자소서 문항과 답변', sample:'꼼꼼합니다 → 어떤 일을 어떻게 확인했나요?',
+    workspace:{title:'경험이 읽히는 문장으로 다듬어요.',description:'자소서 문항과 답변을 넣으면 추상적인 표현을 행동과 근거 중심으로 살펴봅니다.',sourceLabel:'지원할 채용 공고',sourceHint:'필수 · 20자 이상',sourcePlaceholder:'담당 업무, 자격 요건, 우대 사항을 붙여 넣으세요.',contentLabel:'자소서 문항과 현재 답변',contentPlaceholder:'문항과 현재 답변을 함께 입력하세요. 이름·연락처는 빼주세요.',focusLabel:'특히 다듬고 싶은 부분',focusPlaceholder:'예: 나의 역할이 선명한지, 문장이 과장되지 않았는지',reportTitle:'자소서 첨삭 리포트',emptyTitle:'성격을 설명하기보다,\n내가 한 일을 보여주세요.',beforeLabel:'원문',before:'저는 꼼꼼하고 책임감이 있습니다.',afterLabel:'수정 제안',after:'카페 근무 중 인수인계 누락을 발견하고, 마감 체크리스트를 만들어 공유했습니다.',why:'추상적인 장점 대신 문제를 발견하고 행동한 경험이 드러납니다.',question:'어떤 항목을 넣었고, 왜 필요하다고 판단했나요?'}},
   {id:'job-fit', category:'직무 분석', title:'공고와 내 경험 연결하기', brief:'채용 공고의 요구와 내 경험 사이의 연결점을 찾아요.', label:'직무 연결', motif:'02', tone:'sand',
     focus:'채용 공고의 요구 역량과 자소서에 제시된 경험을 연결해 주세요. 확인된 근거와 추론을 구분하고 부족한 정보는 질문으로 남겨 주세요.',
-    audience:'같은 경험을 지원 직무에 맞게 설명하고 싶은 분', outputs:['공고의 요구 역량 정리','경험과 직무의 연결 근거','보완할 정보와 확인 질문'], preparation:'지원 공고 전체, 본인의 경험이 담긴 답변', sample:'요구 역량 ↔ 경험 속 행동 ↔ 설명할 근거'},
+    audience:'같은 경험을 지원 직무에 맞게 설명하고 싶은 분', outputs:['공고의 요구 역량 정리','경험과 직무의 연결 근거','보완할 정보와 확인 질문'], preparation:'지원 공고 전체, 본인의 경험이 담긴 답변', sample:'요구 역량 ↔ 경험 속 행동 ↔ 설명할 근거',
+    workspace:{title:'공고와 내 경험의 연결점을 찾아요.',description:'지원 직무의 요구사항과 아르바이트·수업·프로젝트 경험을 나란히 비교합니다.',sourceLabel:'지원할 채용 공고',sourceHint:'필수 · 20자 이상',sourcePlaceholder:'담당 업무, 필수 역량, 우대 사항이 보이도록 붙여 넣으세요.',contentLabel:'연결할 경험 정리',contentPlaceholder:'경험명 / 내 역할 / 마주한 문제 / 내가 한 행동 / 결과 또는 배운 점 순서로 적어주세요.',focusLabel:'강조하고 싶은 역량',focusPlaceholder:'예: 고객 응대, 자료 정리, 협업 경험을 직무와 연결하고 싶어요.',reportTitle:'직무 연결 리포트',emptyTitle:'공고의 요구와\n경험의 근거를 연결해요.',beforeLabel:'공고의 요구',before:'고객 문의를 정확하게 분류하고 처리할 수 있는 사람',afterLabel:'연결할 경험',after:'카페 문의 내용을 유형별로 정리하고 다음 근무자에게 전달했습니다.',why:'공고의 요구를 경험 속 행동과 연결하면 지원 직무와의 관련성이 선명해집니다.',question:'문의 유형을 나눈 기준과 이후 달라진 점은 무엇인가요?'}},
   {id:'interview', category:'면접', title:'내 자소서로 면접 질문 준비', brief:'내가 쓴 문장에서 질문과 꼬리 질문을 뽑아봐요.', label:'면접 준비', motif:'03', tone:'ink',
     focus:'자소서에 근거한 면접 질문과 꼬리 질문, 답변 평가 기준을 중점적으로 작성해 주세요. 실제로 본인이 한 일을 확인할 수 있는 질문을 포함해 주세요.',
-    audience:'자소서는 썼지만 면접에서 무엇을 말할지 막막한 분', outputs:['경험에 기반한 예상 질문','답변을 깊게 파고드는 꼬리 질문','답변에서 확인할 핵심 기준'], preparation:'지원 공고, 면접에서 설명할 자소서', sample:'어떤 역할이었나요? → 왜 그렇게 결정했나요?'},
+    audience:'자소서는 썼지만 면접에서 무엇을 말할지 막막한 분', outputs:['경험에 기반한 예상 질문','답변을 깊게 파고드는 꼬리 질문','답변에서 확인할 핵심 기준'], preparation:'지원 공고, 면접에서 설명할 자소서', sample:'어떤 역할이었나요? → 왜 그렇게 결정했나요?',
+    workspace:{title:'내 자소서에서 예상 질문을 뽑아요.',description:'자소서를 붙여 넣거나 텍스트 파일로 불러오면 경험별 예상 질문과 꼬리 질문을 준비합니다.',sourceLabel:'지원할 채용 공고',sourceHint:'필수 · 20자 이상',sourcePlaceholder:'면접에서 확인할 직무와 주요 요구 역량을 붙여 넣으세요.',contentLabel:'면접 질문을 만들 자소서',contentPlaceholder:'제출한 자소서 문항과 답변을 붙여 넣거나 아래에서 .txt 파일을 불러오세요.',focusLabel:'집중해서 준비할 부분',focusPlaceholder:'예: 협업 경험의 꼬리 질문, 지원 동기 답변 기준을 준비하고 싶어요.',reportTitle:'면접 준비 리포트',upload:true,emptyTitle:'자소서의 한 문장에서\n질문과 꼬리 질문을 찾아요.',beforeLabel:'자소서 근거',before:'마감 체크리스트를 만들어 다음 근무자에게 공유했습니다.',afterLabel:'예상 질문',after:'체크리스트에는 어떤 항목을 넣었고, 동료의 반응은 어땠나요?',why:'자소서에 적은 행동을 기준으로 질문을 준비하면 답변의 사실관계를 스스로 점검할 수 있습니다.',question:'그 방법을 선택한 이유와 다른 대안은 무엇이었나요?'}},
   {id:'complete', category:'자소서', title:'자소서부터 면접까지 한 번에', brief:'문장을 다듬고, 그 문장을 말로 설명하는 단계까지.', label:'통합 점검', motif:'04', tone:'rose',
     focus:'자소서 진단, 문장 첨삭, 수정 초안, 면접 질문을 균형 있게 제공해 주세요. 제출 전 확인할 사항을 함께 정리해 주세요.',
-    audience:'지원서와 면접 준비를 함께 점검하고 싶은 분', outputs:['진단·첨삭·수정 초안','예상 질문과 답변 기준','제출 전 사실 확인 사항'], preparation:'지원 공고, 자소서 문항과 답변', sample:'진단 → 첨삭 → 수정 초안 → 면접 연습'}
+    audience:'지원서와 면접 준비를 함께 점검하고 싶은 분', outputs:['진단·첨삭·수정 초안','예상 질문과 답변 기준','제출 전 사실 확인 사항'], preparation:'지원 공고, 자소서 문항과 답변', sample:'진단 → 첨삭 → 수정 초안 → 면접 연습',
+    workspace:{title:'자소서와 면접 준비를 함께 점검해요.',description:'문장을 다듬은 뒤 그 내용을 면접에서 설명할 수 있도록 질문까지 이어서 준비합니다.',sourceLabel:'지원할 채용 공고',sourceHint:'필수 · 20자 이상',sourcePlaceholder:'담당 업무, 자격 요건, 우대 사항을 붙여 넣으세요.',contentLabel:'자소서 문항과 답변',contentPlaceholder:'제출할 문항과 답변을 모두 입력하세요. 이름·연락처는 빼주세요.',focusLabel:'통합 점검 우선순위',focusPlaceholder:'예: 지원 동기를 먼저 다듬고, 관련 예상 질문도 함께 받고 싶어요.',reportTitle:'통합 점검 리포트',emptyTitle:'다듬은 문장을\n말로 설명하는 단계까지.',beforeLabel:'자소서 문장',before:'마감 체크리스트를 만들어 공유했습니다.',afterLabel:'면접으로 이어질 질문',after:'체크리스트를 만들게 된 문제와 적용 과정을 설명해 주세요.',why:'문장에 쓴 경험을 말로 설명해 보면 근거가 부족한 부분과 보완할 내용을 함께 찾을 수 있습니다.',question:'제출 전에 확인할 사실과 면접에서 강조할 행동은 무엇인가요?'}}
 ];
 export function findServices(query='', category='전체') {
   const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
