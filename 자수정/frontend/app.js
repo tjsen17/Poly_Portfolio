@@ -37,14 +37,15 @@ $('why-text').textContent = workspace.why;
 $('question-text').textContent = `“${workspace.question}”`;
 $('upload-field').hidden = !workspace.upload;
 if(selectedService.id==='job-fit'){
-  const essay=$('essay'), section=document.createElement('fieldset');section.className='experience-fields';
-  section.innerHTML='<legend>경험별로 정리하기</legend><p>경험을 나눠 적으면 아래에 분석용 내용이 자동으로 모입니다.</p><div id="experiences"></div><button type="button" id="add-experience" class="subtle">경험 추가</button>';
-  essay.previousElementSibling.before(section);essay.readOnly=true;
+  const essay=$('essay'), label=essay.previousElementSibling, section=document.createElement('fieldset');section.className='experience-fields';
+  section.innerHTML='<legend>경험별로 정리하기</legend><p>경험을 나눠 적으면 분석용 내용이 자동으로 모입니다.</p><div id="experiences"></div><button type="button" id="add-experience" class="subtle">경험 추가</button>';
+  label.before(section);essay.readOnly=true;
+  const preview=document.createElement('details');preview.className='experience-preview';preview.innerHTML='<summary>분석용 내용 미리보기 · <span id="preview-count">0자</span></summary>';section.after(preview);preview.append(label,essay);
   const list=section.querySelector('#experiences');
-  const sync=()=>{essay.value=[...list.children].map((card,i)=>`${i+1}. ${[...card.querySelectorAll('input,textarea')].map(field=>`${field.dataset.label}: ${field.value.trim()}`).join('\n')}`).join('\n\n');essay.dispatchEvent(new Event('input',{bubbles:true}));};
+  const sync=()=>{essay.value=[...list.children].map((card,i)=>`${i+1}. ${[...card.querySelectorAll('input,textarea')].map(field=>`${field.dataset.label}: ${field.value.trim()}`).join('\n')}`).join('\n\n');preview.querySelector('#preview-count').textContent=`${essay.value.length.toLocaleString()}자`;essay.dispatchEvent(new Event('input',{bubbles:true}));};
   section.querySelector('#add-experience').addEventListener('click',()=>{if(list.children.length>=5)return;const card=document.createElement('div');card.className='private-block';card.innerHTML='<h3>경험 '+(list.children.length+1)+'</h3><label>경험명<input data-label="경험명" maxlength="100" placeholder="예: 카페 아르바이트"></label><label>내 역할<input data-label="내 역할" maxlength="200"></label><label>마주한 문제<textarea data-label="문제" maxlength="1000" rows="2"></textarea></label><label>내가 한 행동<textarea data-label="행동" maxlength="2000" rows="3"></textarea></label><label>결과 또는 배운 점<textarea data-label="결과" maxlength="1000" rows="2"></textarea></label><button type="button" class="subtle">이 경험 삭제</button>';card.querySelector('button').addEventListener('click',()=>{card.remove();sync();});card.addEventListener('input',sync);list.append(card);});
   section.querySelector('#add-experience').click();
-  $('sample').addEventListener('sample-applied',()=>list.querySelectorAll('input,textarea').forEach(field=>field.value=''));
+  $('sample').addEventListener('sample-applied',()=>{const example=essay.value;list.querySelectorAll('input,textarea').forEach(field=>field.value='');list.querySelector('[data-label="행동"]').value=example;sync();});
 }
 if(selectedService.id==='resume'||selectedService.id==='complete'){
   const question=document.createElement('div');question.className='experience-fields';
@@ -61,13 +62,24 @@ if (workspace.upload) $('resume-file').addEventListener('change',async event=>{
   if($('essay').value&&!confirm('현재 자소서 내용을 파일 내용으로 바꿀까요?')){event.target.value='';return;}
   $('essay').value=text;$('essay').dispatchEvent(new Event('input',{bubbles:true}));$('file-note').textContent=`${file.name} 내용을 불러왔습니다.`;
 });
+let movingToRequest = false;
 // Warn before leaving an unsaved form; no private input is persisted.
 window.addEventListener('beforeunload', event => {
-  if ($('job').value || $('essay').value || ($('focus').value && $('focus').value !== (selectedService?.focus || '')) || !$('report').hidden) {
+  if (!movingToRequest && ($('job').value || $('essay').value || ($('focus').value && $('focus').value !== (selectedService?.focus || '')) || !$('report').hidden)) {
     event.preventDefault(); event.returnValue = '';
   }
 });
 
+$('request-direct').addEventListener('click',()=>{
+  const input=data();
+  const essay=[input.job && `${workspace.sourceLabel}\n${input.job}`,input.essay && `${workspace.contentLabel}\n${input.essay}`].filter(Boolean).join('\n\n');
+  if(essay.length>12000){$('message').textContent='접수 자료는 합계 12,000자까지 보낼 수 있습니다. 공고와 작성 내용을 줄인 뒤 다시 요청해 주세요.';return;}
+  try{
+    sessionStorage.setItem('jasujeong-review-draft',JSON.stringify({service:selectedService.id,essay,aiReport:'',note:input.focus}));
+    movingToRequest=true;
+    location.assign('/request');
+  }catch{$('message').textContent='접수 화면으로 옮기지 못했습니다. 브라우저의 임시 저장 설정을 확인해 주세요.';}
+});
 $('prompt').addEventListener('click',async()=>{if(!$('form').reportValidity())return;try{const result=await post('/api/prompt',data());download(result.text,'첨삭-요청서.txt');$('message').textContent='요청서를 다운로드했습니다. 이 동작은 외부 AI에 자료를 전송하지 않습니다.';}catch(error){$('message').textContent=error.message;}});
 $('form').addEventListener('submit',async event=>{
   event.preventDefault();if(!configured)return;
@@ -78,4 +90,4 @@ $('form').addEventListener('submit',async event=>{
   catch(error){$('message').textContent=error.message;}
   finally{controls.forEach(el=>el.disabled=false);$('analyze').textContent='진단 · 면접 질문 만들기';}
 });
-fetch('/api/status').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(status=>{configured=status.configured;$('analyze').disabled=!configured;$('analyze').textContent=configured?'진단 · 면접 질문 만들기':'AI 연결 전';$('connection').textContent=configured?'AI 설정이 있습니다. 실제 호출 성공 여부는 분석 요청 시 확인됩니다.':'API 설정이 없습니다. 가상 샘플을 보거나 첨삭 요청서를 다운로드할 수 있습니다.';}).catch(()=>{$('connection').textContent='로컬 서버 연결을 확인해 주세요.';$('analyze').textContent='연결할 수 없음';});
+fetch('/api/status').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(status=>{configured=status.configured;$('analyze').disabled=!configured;$('analyze').textContent=configured?'진단 · 면접 질문 만들기':'AI 연결 전';$('connection').textContent=configured?'AI 설정이 있습니다. 실제 호출 성공 여부는 분석 요청 시 확인됩니다.':'API 설정이 없습니다. 운영자 검토는 바로 요청할 수 있으며, 가상 샘플과 요청서 다운로드도 이용할 수 있습니다.';}).catch(()=>{$('connection').textContent='로컬 서버 연결을 확인해 주세요.';$('analyze').textContent='연결할 수 없음';});

@@ -7,11 +7,12 @@ import {validate} from '../backend/validation.mjs';
 import {readFile} from 'node:fs/promises';
 import {services, findServices} from '../frontend/platform/catalog.js';
 import {setupForm} from '../frontend/form.js';
+import {createPrivateStore} from '../backend/private.mjs';
 
 const data={job:'상품 정보 관리와 고객 문의 정리 업무를 담당합니다.',essay:'카페에서 근무하며 마감 업무가 누락되는 것을 발견했습니다. 마감 체크리스트를 만들어 다음 근무자가 확인할 수 있도록 공유했습니다.',focus:'사실만 사용',consent:true};
 const success=async()=>new Response(JSON.stringify({status:'completed',output:[{type:'message',content:[{type:'output_text',text:'확인 근거와 면접 질문'}]}],usage:{input_tokens:100,output_tokens:50}}));
 async function withServer(options,run){const server=createApp(options);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${server.address().port}`;try{await run(base);}finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}}
-function post(base,path,input,origin=base){return fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(input)});}
+function post(base,path,input,origin=base,cookie=''){return fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,Cookie:cookie},body:JSON.stringify(input)});}
 
 test('real local routes: no-key state, request export, validation and consent',async()=>{
  await withServer({key:'',model:''},async base=>{
@@ -145,26 +146,31 @@ test('board persists posts across restarts, validates inputs and preserves concu
  const {join} = await import('node:path');
  const directory = await mkdtemp(join(tmpdir(),'jasujeong-board-'));
  const boardFile = join(directory,'posts.json');
+ const accountFile = join(directory,'private.json');
  const input = {title:'첫 질문 <script>',author:'준비생',category:'질문',body:'자소서 경험을 어떻게 정리하나요?'};
  try {
-  await withServer({boardFile},async base=>{
+  await createPrivateStore(accountFile).register({email:'board@example.test',name:'게시판 사용자',password:'test-only-password'});
+  await withServer({boardFile,accountFile},async base=>{
+   const signed=await post(base,'/api/auth/login',{email:'board@example.test',password:'test-only-password'}),cookie=signed.headers.get('set-cookie').split(';')[0];
    assert.equal((await fetch(base+'/board?write=1')).status,200);
    assert.equal((await fetch(base+'/platform/board.js')).status,200);
    assert.deepEqual((await (await fetch(base+'/api/posts')).json()).posts,[]);
-   for(const invalid of [null, {...input,title:' '}, {...input,category:'공지'}, {...input,body:'가'.repeat(10001)}]) assert.equal((await post(base,'/api/posts',invalid)).status,400);
+   assert.equal((await post(base,'/api/posts',input)).status,401);
+   for(const invalid of [null, {...input,title:' '}, {...input,category:'공지'}, {...input,body:'가'.repeat(10001)}]) assert.equal((await post(base,'/api/posts',invalid,base,cookie)).status,400);
    assert.equal((await post(base,'/api/posts',input,'https://other.example')).status,403);
-   const responses = await Promise.all([post(base,'/api/posts',input),post(base,'/api/posts',{...input,title:'두 번째 글'})]);
+   const responses = await Promise.all([post(base,'/api/posts',input,base,cookie),post(base,'/api/posts',{...input,title:'두 번째 글'},base,cookie)]);
    assert.ok(responses.every(response=>response.status===201));
    const posts = (await (await fetch(base+'/api/posts')).json()).posts;
    assert.equal(posts.length,2);assert.equal(new Set(posts.map(item=>item.id)).size,2);
    assert.ok(posts.some(item=>item.title===input.title));
+   assert.ok(posts.every(item=>item.author==='게시판 사용자'&&item.canEdit===false));
    assert.equal((await fetch(base+'/data/posts.json')).status,404);
    const request={...input,category:'추가 첨삭 요청',essay:'원문',aiReport:'AI 결과',publicConsent:true,status:'완료'};
-   for(const invalid of [{...request,publicConsent:false},{...request,essay:''},{...request,aiReport:'가'.repeat(20001)}]) assert.equal((await post(base,'/api/posts',invalid)).status,400);
-   const response=await post(base,'/api/posts',request);
+   for(const invalid of [{...request,publicConsent:false},{...request,essay:''},{...request,aiReport:'가'.repeat(20001)}]) assert.equal((await post(base,'/api/posts',invalid,base,cookie)).status,400);
+   const response=await post(base,'/api/posts',request,base,cookie);
    assert.equal(response.status,400);
   });
-  await withServer({boardFile},async base=>{assert.equal((await (await fetch(base+'/api/posts')).json()).posts.length,2);});
+  await withServer({boardFile,accountFile},async base=>{assert.equal((await (await fetch(base+'/api/posts')).json()).posts.length,2);});
  } finally {await rm(directory,{recursive:true,force:true});}
 });
 

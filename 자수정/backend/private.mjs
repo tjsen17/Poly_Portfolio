@@ -13,27 +13,47 @@ const cookie=(value,age)=>`jasu_sid=${value}; HttpOnly; SameSite=Strict; Path=/;
 const optional=(value,max,label)=>field(value||'',0,max,label);
 const day=value=>{if(!value)return '';if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(Date.parse(value+'T00:00:00')))fail('날짜는 YYYY-MM-DD 형식으로 입력해 주세요.');return value;};
 const notify=(db,userId,requestId,text)=>{db.notifications??=[];db.notifications.push({id:randomUUID(),userId,requestId,text,at:new Date().toISOString(),read:false});};
-export function createPrivateStore(file=privateFile){
+export function createPrivateStore(file=privateFile,sendVerification=null){
  let pending=Promise.resolve();const sessions=new Map(),attempts=new Map();
  async function load(){try{const db=JSON.parse(await readFile(file,'utf8'));if(db.version!==1||!Array.isArray(db.users)||!Array.isArray(db.requests))throw new Error('Invalid private store');return db;}catch(e){if(e.code==='ENOENT')return {version:1,users:[],requests:[]};throw e;}}
  function change(fn){const task=pending.then(async()=>{const db=await load(),result=await fn(db),tmp=file+'.'+randomUUID()+'.tmp';await mkdir(dirname(file),{recursive:true});try{await writeFile(tmp,JSON.stringify(db),'utf8');await rename(tmp,file);}catch(e){await unlink(tmp).catch(()=>{});throw e;}return result;});pending=task.catch(()=>{});return task;}
- async function register(input,role='customer'){
+ async function register(input,role='customer',requireVerification=false){
   const email=field(input?.email,3,254,'이메일').toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('이메일 형식을 확인해 주세요.');
   const password=input?.password;if(typeof password!=='string'||password.length<10||password.length>128)fail('비밀번호는 10~128자로 입력해 주세요.');
+  if(requireVerification&&input.passwordConfirm!==password)fail('비밀번호 확인이 일치하지 않습니다.');
+  if(requireVerification&&!sendVerification)fail('이메일 발송 설정 전에는 회원가입할 수 없습니다.',503);
   const name=field(input?.name,1,30,'이름');const salt=randomBytes(16).toString('hex');const key=await scrypt(password,salt,64,{N:32768,r:8,p:1,maxmem:64*1024*1024});
-  return change(db=>{if(db.users.some(u=>u.email===email))fail('이미 등록된 이메일입니다.',409);const user={id:randomUUID(),email,name,role,salt,passwordHash:key.toString('hex')};db.users.push(user);return publicUser(user);});
+  return change(async db=>{
+   if(db.users.some(u=>u.email===email))fail('이미 등록된 이메일입니다.',409);
+   const token=requireVerification?randomBytes(32).toString('hex'):null;
+   if(token)try{await sendVerification(email,token);}catch{fail('인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.',502);}
+   const user={id:randomUUID(),email,name,role,salt,passwordHash:key.toString('hex'),verifiedAt:token?null:new Date().toISOString()};
+   if(token){user.verificationHash=hash(token);user.verificationExpires=Date.now()+24*3600000;user.verificationSentAt=Date.now();}
+   db.users.push(user);return publicUser(user);
+  });
+ }
+ async function verify(token){
+  if(typeof token!=='string'||!/^[a-f0-9]{64}$/.test(token))fail('인증 링크가 올바르지 않습니다.');
+  return change(db=>{const user=db.users.find(u=>u.verificationHash===hash(token)&&u.verifiedAt===null);if(!user||user.verificationExpires<Date.now())fail('인증 링크가 만료되었거나 유효하지 않습니다.');user.verifiedAt=new Date().toISOString();delete user.verificationHash;delete user.verificationExpires;delete user.verificationSentAt;return {ok:true};});
+ }
+ async function resend(email){
+  email=field(email,3,254,'이메일').toLowerCase();if(!sendVerification)fail('이메일 발송 설정 전에는 인증 메일을 보낼 수 없습니다.',503);
+  return change(async db=>{const user=db.users.find(u=>u.email===email&&u.verifiedAt===null);if(!user||Date.now()-(user.verificationSentAt||0)<60000)return {ok:true};const token=randomBytes(32).toString('hex');try{await sendVerification(email,token);}catch{fail('인증 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.',502);}user.verificationHash=hash(token);user.verificationExpires=Date.now()+24*3600000;user.verificationSentAt=Date.now();return {ok:true};});
  }
  async function current(req){const sid=(req.headers.cookie||'').match(/(?:^|;\s*)jasu_sid=([a-f0-9]{64})(?:;|$)/)?.[1];if(!sid)return null;const session=sessions.get(hash(sid));if(!session)return null;if(session.expires<Date.now()){sessions.delete(hash(sid));return null;}return (await load()).users.find(u=>u.id===session.userId)||null;}
  function dto(r,user){const {draft,...result}=r;return user.role==='operator'?r:result;}
  return {register,current,async handle(path,req,input={}){
-  if(path==='/api/auth/register'||path==='/api/auth/login'){
+  if(['/api/auth/register','/api/auth/login','/api/auth/verify','/api/auth/resend'].includes(path)){
    if(!input||typeof input!=='object'||Array.isArray(input))fail('입력 형식을 확인해 주세요.');
    const ip=req.socket.remoteAddress,now=Date.now();for(const [key,value]of attempts)if(value.until<now)attempts.delete(key);
    const limit=attempts.get(ip)||{count:0,until:now+60000};if(++limit.count>15)fail('로그인 시도가 많습니다. 잠시 후 다시 시도해 주세요.',429);attempts.set(ip,limit);
-   if(path.endsWith('register'))return {status:201,body:{user:await register(input)}};
+   if(path==='/api/auth/register')return {status:201,body:{user:await register(input,'customer',true)}};
+   if(path==='/api/auth/verify')return {body:await verify(input.token)};
+   if(path==='/api/auth/resend')return {body:await resend(input.email)};
    const email=field(input.email,3,254,'이메일').toLowerCase();if(typeof input.password!=='string'||input.password.length>128)fail('이메일 또는 비밀번호가 올바르지 않습니다.',401);
    const user=(await load()).users.find(u=>u.email===email),derived=await scrypt(input.password,user?.salt||'unknown-user',64,{N:32768,r:8,p:1,maxmem:64*1024*1024});
    if(!user||!timingSafeEqual(derived,Buffer.from(user.passwordHash,'hex')))fail('이메일 또는 비밀번호가 올바르지 않습니다.',401);
+   if(user.verifiedAt===null)fail('이메일 인증을 완료한 뒤 로그인해 주세요.',403);
    for(const [key,value]of sessions)if(value.expires<now)sessions.delete(key);
    if(sessions.size>=1000)fail('접속 세션이 많습니다. 잠시 후 다시 시도해 주세요.',429);
    const old=(req.headers.cookie||'').match(/jasu_sid=([a-f0-9]{64})/)?.[1];if(old)sessions.delete(hash(old));
@@ -42,6 +62,7 @@ export function createPrivateStore(file=privateFile){
   }
   if(path==='/api/auth/logout'){const sid=(req.headers.cookie||'').match(/jasu_sid=([a-f0-9]{64})/)?.[1];if(sid)sessions.delete(hash(sid));return {headers:{'Set-Cookie':cookie('',0)},body:{ok:true}};}
   const user=await current(req);
+  if(path==='/api/auth/config')return {body:{signupAvailable:!!sendVerification}};
   if(path==='/api/auth/me')return {body:{user:user?publicUser(user):null}};
   if(!user)fail('로그인 후 이용해 주세요.',401);
   const url=new URL(req.url,'http://local');

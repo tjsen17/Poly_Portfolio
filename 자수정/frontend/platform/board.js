@@ -9,10 +9,12 @@ export async function mountBoard(content) {
   const category = categories.includes(params.get('category')) ? params.get('category') : '전체';
   if(params.get('category')==='추가 첨삭 요청'){location.replace('/request');return;}
   const back = `/board?${new URLSearchParams({q,category})}`;
-  content.innerHTML = `<section class="page-intro"><p class="eyebrow">자수정 커뮤니티</p><h1>함께 준비하는 다음 기회.</h1><p>막히는 문장은 질문하고, 도움이 된 경험은 나누세요.</p><p class="disclosure">로컬 게시판 · 이 서버에 저장됩니다. 닉네임은 인증되지 않습니다.</p></section><div id="board-view" aria-live="polite">게시글을 불러오고 있습니다.</div>`;
+  content.innerHTML = `<section class="page-intro"><p class="eyebrow">자수정 커뮤니티</p><h1>함께 준비하는 다음 기회.</h1><p>막히는 문장은 질문하고, 도움이 된 경험은 나누세요.</p><p class="disclosure">게시글은 서버에 저장되며 로그인 계정에 연결됩니다.</p></section><div id="board-view" aria-live="polite">게시글을 불러오고 있습니다.</div>`;
   const view = document.getElementById('board-view');
   if (params.get('write') === '1') {
-    view.innerHTML = `<a href="${escape(back)}">← 게시판으로</a><form id="post-form" class="board-form"><h2>새 글 작성</h2><p>자소서 검토는 <a href="/request">비공개 첨삭 접수</a>를 이용해 주세요.</p><div class="board-fields"><label>분류<select name="category">${categories.slice(1).map(c=>`<option ${c===category?'selected':''}>${c}</option>`).join('')}</select></label><label>닉네임<input name="author" maxlength="30" required autocomplete="nickname"></label></div><label>제목<input name="title" maxlength="100" required></label><label>내용<textarea name="body" rows="12" maxlength="10000" required></textarea></label><p>공개 게시글입니다. 개인정보와 자소서 원문은 올리지 마세요.</p><div class="board-actions"><button type="submit">게시글 등록</button><a href="${escape(back)}">취소</a></div><p id="post-error" role="alert"></p></form>`;
+    const {user}=await (await fetch('/api/auth/me')).json();
+    if(!user){view.innerHTML='<div class="no-results"><h2>글을 쓰려면 로그인해 주세요.</h2><p>로그인 후에는 본인 글을 수정하거나 삭제할 수 있습니다.</p><a class="button" href="/login?next=%2Fboard%3Fwrite%3D1">로그인하고 글쓰기</a></div>';return;}
+    view.innerHTML = `<a href="${escape(back)}">← 게시판으로</a><form id="post-form" class="board-form"><h2>새 글 작성</h2><p>자소서 검토는 <a href="/request">비공개 첨삭 접수</a>를 이용해 주세요.</p><div class="board-fields"><label>분류<select name="category">${categories.slice(1).map(c=>`<option ${c===category?'selected':''}>${c}</option>`).join('')}</select></label></div><label>제목<input name="title" maxlength="100" required></label><label>내용<textarea name="body" rows="12" maxlength="10000" required></textarea></label><p>공개 게시글입니다. 개인정보와 자소서 원문은 올리지 마세요.</p><div class="board-actions"><button type="submit">게시글 등록</button><a href="${escape(back)}">취소</a></div><p id="post-error" role="alert"></p></form>`;
     const form = document.getElementById('post-form');
     let dirty = false;
     form.addEventListener('input',()=>{dirty=true;});

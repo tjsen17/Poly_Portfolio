@@ -1,5 +1,6 @@
 import http from 'node:http';
 import {createPrivateStore} from './private.mjs';
+import {verificationMailer} from './email.mjs';
 import {readFile} from 'node:fs/promises';
 import {review} from './review.mjs';
 import {prompt} from './prompt.mjs';
@@ -49,15 +50,15 @@ const assets = {
   ]
 };
 for (const id of services.map(item=>item.id)) assets[`/workspace/${id}`] = ['index.html','text/html; charset=utf-8'];
-for (const path of ['/', '/board', '/services', '/guide', '/login', '/signup', '/my', '/request', '/operator', ...services.map(item=>`/services/${item.id}`)]) {
+for (const path of ['/', '/board', '/services', '/guide', '/login', '/signup', '/verify', '/my', '/request', '/operator', ...services.map(item=>`/services/${item.id}`)]) {
   assets[path] = ['platform/page.html', 'text/html; charset=utf-8'];
 }
 for (const file of ['platform.js', 'board.js', 'catalog.js', 'platform.css', 'private.js', 'private.css']) {
   assets[`/platform/${file}`] = [`platform/${file}`, file.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8'];
 }
-export function createApp({key = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL, fetcher = fetch, boardFile, accountFile} = {}) {
-  const board = createBoard(boardFile),accounts=createPrivateStore(accountFile);
-  const privatePosts=['/api/auth/register','/api/auth/login','/api/auth/logout','/api/requests','/api/requests/update','/api/requests/reply','/api/requests/recheck','/api/requests/interview','/api/drafts','/api/notifications/read'];
+export function createApp({key = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL, fetcher = fetch, boardFile, accountFile, sendVerification = verificationMailer()} = {}) {
+ const board = createBoard(boardFile),accounts=createPrivateStore(accountFile,sendVerification);
+ const privatePosts=['/api/auth/register','/api/auth/login','/api/auth/verify','/api/auth/resend','/api/auth/logout','/api/requests','/api/requests/update','/api/requests/reply','/api/requests/recheck','/api/requests/interview','/api/drafts','/api/notifications/read'];
   // ponytail: one local request at a time; use authenticated per-user quotas before hosting.
   let busy = false;
   return http.createServer(async (req,res) => {
@@ -75,7 +76,7 @@ export function createApp({key = process.env.OPENAI_API_KEY, model = process.env
         return reply(200,await readFile(new URL(`../frontend/${file}`,import.meta.url)),type);
       }
       if(req.method === 'GET' && req.url === '/api/status') return reply(200,{configured:Boolean(key && model)});
-      if(req.method==='GET' && ['/api/auth/me','/api/requests','/api/drafts','/api/notifications'].includes(pathname)){const result=await accounts.handle(pathname,req);return reply(result.status||200,result.body,'application/json; charset=utf-8',result.headers);}
+      if(req.method==='GET' && ['/api/auth/me','/api/auth/config','/api/requests','/api/drafts','/api/notifications'].includes(pathname)){const result=await accounts.handle(pathname,req);return reply(result.status||200,result.body,'application/json; charset=utf-8',result.headers);}
       if(req.method==='GET' && pathname==='/api/legacy-requests'){const user=await accounts.current(req);if(user?.role!=='operator')return reply(403,{error:'운영자 권한이 필요합니다.'});return reply(200,{posts:await board.legacy()});}
       if(req.method === 'GET' && pathname === '/api/posts') return reply(200,{posts:await board.list(await accounts.current(req))});
       if(req.method !== 'POST' || !['/api/review','/api/prompt','/api/posts','/api/posts/action',...privatePosts].includes(req.url)) return reply(404,{error:'페이지를 찾을 수 없습니다.'});
