@@ -61,6 +61,12 @@ textarea::placeholder { color: #72776e; }
 textarea:hover { border-color: #8b9a88; }
 textarea:focus { outline: 2px solid var(--accent); outline-offset: 2px; background: var(--surface); }
 textarea:disabled { background: #eeeee8; color: var(--muted); }
+.experience-fields { border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin: 20px 0; }
+.experience-fields legend { padding: 0 8px; font-weight: 700; }
+.experience-fields .private-block { padding: 18px; background: #f7f8f3; border-radius: 8px; margin: 14px 0; }
+.experience-fields label { display: block; margin: 12px 0; font-weight: 600; }
+.experience-fields input { display: block; width: 100%; padding: 12px; border: 1px solid #c9cec3; border-radius: 7px; font: inherit; }
+.experience-fields textarea { margin-top: 7px; }
 #job { min-height: 112px; }
 #essay { min-height: 200px; }
 #focus { min-height: 72px; }

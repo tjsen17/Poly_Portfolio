@@ -36,6 +36,23 @@ $('after-text').textContent = workspace.after;
 $('why-text').textContent = workspace.why;
 $('question-text').textContent = `“${workspace.question}”`;
 $('upload-field').hidden = !workspace.upload;
+if(selectedService.id==='job-fit'){
+  const essay=$('essay'), section=document.createElement('fieldset');section.className='experience-fields';
+  section.innerHTML='<legend>경험별로 정리하기</legend><p>경험을 나눠 적으면 아래에 분석용 내용이 자동으로 모입니다.</p><div id="experiences"></div><button type="button" id="add-experience" class="subtle">경험 추가</button>';
+  essay.previousElementSibling.before(section);essay.readOnly=true;
+  const list=section.querySelector('#experiences');
+  const sync=()=>{essay.value=[...list.children].map((card,i)=>`${i+1}. ${[...card.querySelectorAll('input,textarea')].map(field=>`${field.dataset.label}: ${field.value.trim()}`).join('\n')}`).join('\n\n');essay.dispatchEvent(new Event('input',{bubbles:true}));};
+  section.querySelector('#add-experience').addEventListener('click',()=>{if(list.children.length>=5)return;const card=document.createElement('div');card.className='private-block';card.innerHTML='<h3>경험 '+(list.children.length+1)+'</h3><label>경험명<input data-label="경험명" maxlength="100" placeholder="예: 카페 아르바이트"></label><label>내 역할<input data-label="내 역할" maxlength="200"></label><label>마주한 문제<textarea data-label="문제" maxlength="1000" rows="2"></textarea></label><label>내가 한 행동<textarea data-label="행동" maxlength="2000" rows="3"></textarea></label><label>결과 또는 배운 점<textarea data-label="결과" maxlength="1000" rows="2"></textarea></label><button type="button" class="subtle">이 경험 삭제</button>';card.querySelector('button').addEventListener('click',()=>{card.remove();sync();});card.addEventListener('input',sync);list.append(card);});
+  section.querySelector('#add-experience').click();
+  $('sample').addEventListener('sample-applied',()=>list.querySelectorAll('input,textarea').forEach(field=>field.value=''));
+}
+if(selectedService.id==='resume'||selectedService.id==='complete'){
+  const question=document.createElement('div');question.className='experience-fields';
+  question.innerHTML='<label for="question">자소서 문항<input id="question" maxlength="1000" placeholder="예: 지원 동기와 입사 후 포부를 기술해 주세요."></label><label for="word-limit">문항별 글자 수 제한<input id="word-limit" type="number" min="1" max="12000" placeholder="예: 700"></label>';
+  $('essay').previousElementSibling.before(question);
+  $('essay-label').textContent='현재 작성한 답변';
+  $('sample').addEventListener('sample-applied',()=>{question.querySelectorAll('input').forEach(input=>input.value='');});
+}
 document.title = `${selectedService.label} 작업실 | 자수정`;
 if (workspace.upload) $('resume-file').addEventListener('change',async event=>{
   const file=event.target.files[0];if(!file)return;

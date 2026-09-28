@@ -57,7 +57,7 @@ for (const file of ['platform.js', 'board.js', 'catalog.js', 'platform.css', 'pr
 }
 export function createApp({key = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL, fetcher = fetch, boardFile, accountFile} = {}) {
   const board = createBoard(boardFile),accounts=createPrivateStore(accountFile);
-  const privatePosts=['/api/auth/register','/api/auth/login','/api/auth/logout','/api/requests','/api/requests/update','/api/requests/reply'];
+  const privatePosts=['/api/auth/register','/api/auth/login','/api/auth/logout','/api/requests','/api/requests/update','/api/requests/reply','/api/requests/recheck','/api/requests/interview','/api/drafts','/api/notifications/read'];
   // ponytail: one local request at a time; use authenticated per-user quotas before hosting.
   let busy = false;
   return http.createServer(async (req,res) => {
@@ -75,24 +75,22 @@ export function createApp({key = process.env.OPENAI_API_KEY, model = process.env
         return reply(200,await readFile(new URL(`../frontend/${file}`,import.meta.url)),type);
       }
       if(req.method === 'GET' && req.url === '/api/status') return reply(200,{configured:Boolean(key && model)});
-      if(req.method==='GET' && ['/api/auth/me','/api/requests'].includes(pathname)){const result=await accounts.handle(pathname,req);return reply(result.status||200,result.body,'application/json; charset=utf-8',result.headers);}
+      if(req.method==='GET' && ['/api/auth/me','/api/requests','/api/drafts','/api/notifications'].includes(pathname)){const result=await accounts.handle(pathname,req);return reply(result.status||200,result.body,'application/json; charset=utf-8',result.headers);}
       if(req.method==='GET' && pathname==='/api/legacy-requests'){const user=await accounts.current(req);if(user?.role!=='operator')return reply(403,{error:'운영자 권한이 필요합니다.'});return reply(200,{posts:await board.legacy()});}
-      if(req.method === 'GET' && pathname === '/api/posts') return reply(200,{posts:await board.list()});
-      if(req.method !== 'POST' || !['/api/review','/api/prompt','/api/posts',...privatePosts].includes(req.url)) return reply(404,{error:'페이지를 찾을 수 없습니다.'});
+      if(req.method === 'GET' && pathname === '/api/posts') return reply(200,{posts:await board.list(await accounts.current(req))});
+      if(req.method !== 'POST' || !['/api/review','/api/prompt','/api/posts','/api/posts/action',...privatePosts].includes(req.url)) return reply(404,{error:'페이지를 찾을 수 없습니다.'});
       if(req.headers.origin !== `http://${expectedHost}` || !req.headers['content-type']?.startsWith('application/json')) return reply(403,{error:'이 화면에서 다시 요청해 주세요.'});
       let size = 0; const chunks = [];
       for await(const chunk of req) {
         size += chunk.length;
-        if(size > ((req.url === '/api/posts'||privatePosts.includes(req.url)) ? 300000 : 100000)) { reply(413,{error:'입력 용량이 너무 큽니다.'}); return; }
+        if(size > ((req.url.startsWith('/api/posts')||privatePosts.includes(req.url)) ? 300000 : 100000)) { reply(413,{error:'입력 용량이 너무 큽니다.'}); return; }
         chunks.push(chunk);
       }
       let data;
-      try {data=JSON.parse(Buffer.concat(chunks).toString());if(req.url !== '/api/posts'&&!privatePosts.includes(req.url))validate(data);} catch(error) {return reply(400,{error:error instanceof SyntaxError ? '입력 형식이 올바르지 않습니다.' : error.message});}
+      try {data=JSON.parse(Buffer.concat(chunks).toString());if(!req.url.startsWith('/api/posts')&&!privatePosts.includes(req.url))validate(data);} catch(error) {return reply(400,{error:error instanceof SyntaxError ? '입력 형식이 올바르지 않습니다.' : error.message});}
       if(privatePosts.includes(req.url)){const result=await accounts.handle(req.url,req,data);return reply(result.status||200,result.body,'application/json; charset=utf-8',result.headers);}
-      if(req.url === '/api/posts') {
-        try {return reply(201,{post:await board.add(data)});}
-        catch(error) {if(error instanceof TypeError)return reply(400,{error:error.message});throw error;}
-      }
+      if(req.url === '/api/posts') return reply(201,{post:await board.add(data,await accounts.current(req))});
+      if(req.url === '/api/posts/action') return reply(200,await board.mutate(data,await accounts.current(req)));
       if(req.url === '/api/prompt') return reply(200,{text:prompt(data)});
       if(data.consent !== true) return reply(400,{error:'외부 AI 전송 동의가 필요합니다.'});
       if(!key || !model) return reply(503,{error:'AI 연결 전입니다. API 키와 모델 설정이 필요합니다.'});

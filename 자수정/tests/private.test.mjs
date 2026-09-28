@@ -74,3 +74,55 @@ test('simultaneous signup preserves unique accounts; repeated auth attempts are 
  await server(options,async call=>{const results=await Promise.all([call('/api/auth/register',customer),call('/api/auth/register',customer)]);assert.deepEqual(results.map(r=>r.status).sort(),[201,409]);for(let i=0;i<13;i++)assert.equal((await call('/api/auth/login',{...customer,password:'wrong-password'})).status,401);assert.equal((await call('/api/auth/login',customer)).status,429);});
  assert.equal(JSON.parse(await readFile(options.accountFile,'utf8')).users.length,1);
 }));
+test('draft, interview, recheck and notifications stay private across restart',async()=>fixture(async options=>{
+ const admin={email:'operator-extra@example.test',name:'운영자',password:'operator-test-password'};
+ const store=createPrivateStore(options.accountFile);await store.register(admin,'operator');await store.register(customer);
+ let id;
+ await server(options,async call=>{
+  const user=await login(call),op=await login(call,admin);
+  const draft=await call('/api/drafts',{action:'save',title:'지원 준비',company:'예시 회사',role:'기획',deadline:'2026-10-15',essay:'작성 중인 내용'},user);
+  assert.equal(draft.status,200);assert.equal((await call('/api/drafts',undefined,op)).data.drafts.length,0);
+  const created=await call('/api/requests',{...request,consent:true,company:'예시 회사',role:'기획',deadline:'2026-10-15',service:'interview'},user);
+  assert.equal(created.status,201);id=created.data.request.id;
+  assert.equal((await call('/api/requests/interview',{id,version:0,action:'question',text:'이 경험에서 본인 역할은 무엇인가요?'},user)).status,409);
+  assert.equal((await call('/api/requests/interview',{id,version:0,action:'question',text:'이 경험에서 본인 역할은 무엇인가요?'},op)).status,200);
+  assert.equal((await call('/api/requests/interview',{id,version:1,action:'answer',text:'마감 항목을 정리하고 동료에게 공유했습니다.'},user)).status,200);
+  assert.equal((await call('/api/requests/interview',{id,version:2,action:'followup',text:'왜 그 방법을 선택했나요?'},op)).status,200);
+  assert.equal((await call('/api/requests/interview',{id,version:3,action:'followup_answer',text:'누락을 줄일 수 있는 방법이었기 때문입니다.'},user)).status,200);
+  assert.equal((await call('/api/requests/interview',{id,version:4,action:'feedback',text:'역할은 분명합니다. 결과를 수치 없이 구체화해 보세요.'},op)).status,200);
+  assert.ok((await call('/api/notifications',undefined,user)).data.notifications.length);
+  assert.equal((await call('/api/requests?id='+id,undefined,op)).data.request.interview.turns.length,1);
+ });
+ await server(options,async call=>{
+  const user=await login(call),op=await login(call,admin);
+  const r=(await call('/api/requests?id='+id,undefined,user)).data.request;
+  assert.equal(r.interview.feedback,'역할은 분명합니다. 결과를 수치 없이 구체화해 보세요.');
+  assert.equal(r.company,'예시 회사');assert.equal(r.deadline,'2026-10-15');
+  const final={id,version:r.version,status:'completed',revision:'카페 근무 중 마감 항목을 정리해 체크리스트로 만들고 다음 근무자에게 공유했습니다.',reason:'추상적인 성격 표현보다 실제 맡은 행동과 협업 내용을 보여 주기 위한 수정입니다.',next:'체크리스트를 적용한 뒤 실제로 어떤 변화가 있었는지 본인 경험으로 확인해 주세요.',checked:true};
+  assert.equal((await call('/api/requests/update',final,op)).status,200);
+  assert.equal((await call('/api/requests/recheck',{id,version:r.version+1,message:'협업 경험 부분을 다시 확인해 주세요.'},user)).status,200);
+  assert.equal((await call('/api/requests/recheck',{id,version:r.version+2,message:'다시 요청'},user)).status,403);
+  assert.equal((await call('/api/requests?id='+id,undefined,user)).data.request.status,'recheck_requested');
+ });
+}));
+test('board owner controls, comments, reports and operator moderation',async()=>fixture(async options=>{
+ const other={email:'other-board@example.test',name:'다른 고객',password:'other-test-password'};
+ const admin={email:'board-admin@example.test',name:'운영자',password:'operator-test-password'};
+ const store=createPrivateStore(options.accountFile);await store.register(customer);await store.register(other);await store.register(admin,'operator');
+ await server(options,async call=>{
+  const owner=await login(call),visitor=await login(call,other),op=await login(call,admin);
+  const created=await call('/api/posts',{category:'질문',title:'지원 질문',author:'고객',body:'면접 준비 질문입니다.'},owner);
+  assert.equal(created.status,201);const id=created.data.post.id;
+  assert.equal((await call('/api/posts/action',{id,action:'edit',title:'변경',body:'남의 글 변경'},visitor)).status,403);
+  assert.equal((await call('/api/posts/action',{id,action:'edit',title:'지원 질문 수정',body:'수정된 내용입니다.'},owner)).status,200);
+  const commented=await call('/api/posts/action',{id,action:'comment',body:'제가 준비한 답변을 공유합니다.'},visitor);assert.equal(commented.status,200);
+  const commentId=commented.data.comment.id;
+  assert.equal((await call('/api/posts/action',{id,action:'comment_delete',commentId},owner)).status,403);
+  assert.equal((await call('/api/posts/action',{id,action:'report',reason:'개인정보 노출 의심'},visitor)).status,200);
+  assert.equal((await call('/api/posts/action',{id,action:'moderate',hidden:true,pinned:true},owner)).status,403);
+  assert.equal((await call('/api/posts/action',{id,action:'moderate',hidden:true,pinned:true},op)).status,200);
+  assert.equal((await call('/api/posts',undefined,visitor)).data.posts.length,0);
+  assert.equal((await call('/api/posts',undefined,op)).data.posts[0].reportCount,1);
+  assert.equal((await call('/api/posts/action',{id,action:'delete'},owner)).status,200);
+ });
+}));
