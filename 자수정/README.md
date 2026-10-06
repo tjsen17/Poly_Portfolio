@@ -75,7 +75,7 @@ Node.js 22 이상이 필요합니다. 추가 패키지 설치는 필요하지 �
 
 ## 설정 및 현재 한계
 
-실제 AI 분석에는 프로젝트 루트의 `.env`에 `OPENAI_API_KEY`, `OPENAI_MODEL` 설정이 필요합니다. `.env.example`을 참고하세요. 기존 비밀 설정은 복사하지 않았습니다.
+실제 AI 분석에는 프로젝트 루트의 `.env`에 `OPENAI_API_KEY`, `OPENAI_MODEL` 설정이 필요합니다. 로컬 FreeLLMAPI를 선택하려면 `AI_PROVIDER=freellmapi`, `FREELLMAPI_API_KEY=통합 키`, `FREELLMAPI_MODEL=auto`를 설정하세요. 기본 접속 주소는 `http://127.0.0.1:3001/v1/responses`이며, 로컬 포트가 다르면 `FREELLMAPI_PORT`를 지정할 수 있습니다. FreeLLMAPI는 별도로 실행하고 제공자 키를 등록해야 합니다. `.env.example`을 참고하세요. 기존 비밀 설정은 복사하지 않았습니다.
 
 실제 AI 호출·과금은 이번 작업에 포함하지 않습니다. 테스트의 AI 응답은 모의 응답입니다. 결제, 데이터베이스, 공개 배포, 자율 유지보수는 아직 구현되지 않았습니다.
 

@@ -41,6 +41,15 @@ test('HTTP review passes bounded request and extracts actual provider output (pr
   return success();
  }},async base=>{const response=await post(base,'/api/review',data);assert.equal(response.status,200);assert.equal((await response.json()).text,'확인 근거와 면접 질문');assert.equal(calls,1);});
 });
+test('local FreeLLMAPI uses its unified key and auto model without changing the OpenAI path (mocked)',async()=>{
+ let calls=0;
+ await withServer({provider:'freellmapi',key:'router-test-key',model:'auto',routerPort:3001,fetcher:async(url,options)=>{
+  calls++;assert.equal(url,'http://127.0.0.1:3001/v1/responses');assert.equal(options.headers.Authorization,'Bearer router-test-key');
+  assert.equal(JSON.parse(options.body).model,'auto');return success();
+ }},async base=>{const response=await post(base,'/api/review',data);assert.equal(response.status,200);assert.equal((await response.json()).text,'확인 근거와 면접 질문');});
+ assert.equal(calls,1);
+ await assert.rejects(()=>review(data,{key:'test',model:'auto',provider:'freellmapi',routerPort:'invalid',fetcher:()=>{throw new Error('must not call');}}),/로컬 포트/);
+});
 test('provider failures are not shown as finished reports (mocked)',async()=>{
  for(const [payload,status]of [[{},429],[{status:'incomplete',output:[]},200],[{status:'completed',output:[]},200],[{status:'completed',output:[{content:[{type:'refusal'}]}]},200]]) {
   await assert.rejects(()=>review(data,{key:'test',model:'test',fetcher:async()=>new Response(JSON.stringify(payload),{status})}));

@@ -57,7 +57,7 @@ for (const path of ['/', '/board', '/services', '/guide', '/login', '/signup', '
 for (const file of ['platform.js', 'board.js', 'catalog.js', 'platform.css', 'private.js', 'private.css']) {
   assets[`/platform/${file}`] = [`platform/${file}`, file.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8'];
 }
-export function createApp({key = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL, fetcher = fetch, boardFile, accountFile, sendVerification = verificationMailer()} = {}) {
+export function createApp({provider = process.env.AI_PROVIDER || 'openai', key = provider==='freellmapi'?process.env.FREELLMAPI_API_KEY:process.env.OPENAI_API_KEY, model = provider==='freellmapi'?(process.env.FREELLMAPI_MODEL||'auto'):process.env.OPENAI_MODEL, routerPort = process.env.FREELLMAPI_PORT || 3001, fetcher = fetch, boardFile, accountFile, sendVerification = verificationMailer()} = {}) {
  const board = createBoard(boardFile),accounts=createPrivateStore(accountFile,sendVerification);
  const privatePosts=['/api/auth/register','/api/auth/login','/api/auth/verify','/api/auth/resend','/api/auth/logout','/api/account/delete','/api/requests','/api/requests/update','/api/requests/reply','/api/requests/recheck','/api/requests/interview','/api/drafts','/api/notifications/read'];
   // ponytail: one local request at a time; use authenticated per-user quotas before hosting.
@@ -103,7 +103,7 @@ export function createApp({key = process.env.OPENAI_API_KEY, model = process.env
       if(!key || !model) return reply(503,{error:'AI 연결 전입니다. API 키와 모델 설정이 필요합니다.'});
       if(busy) return reply(429,{error:'앞선 분석이 진행 중입니다. 완료 후 다시 요청해 주세요.'});
       busy = true;
-      try {reply(200,await review(data,{key,model,fetcher}));}
+      try {reply(200,await review(data,{key,model,provider,routerPort,fetcher}));}
       catch(error) {reply(502,{error:['TimeoutError','AbortError'].includes(error.name) ? 'AI 응답 시간이 초과되었습니다. 자동 재시도하지 않았습니다.' : error.message});}
       finally {busy=false;}
     } catch(error) {if(error.status)return reply(error.status,{error:error.message});if(!res.headersSent) reply(500,{error:'처리 중 문제가 생겼습니다. 입력은 그대로 두고 다시 확인해 주세요.'});}

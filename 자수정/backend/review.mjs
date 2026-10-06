@@ -1,10 +1,13 @@
 import {validate} from './validation.mjs';
 import {instructions} from './prompt.mjs';
 
-export async function review(data, {key, model, fetcher = fetch}) {
+export async function review(data, {key, model, provider = 'openai', routerPort = 3001, fetcher = fetch}) {
   const input = validate(data);
   if (!key || !model) throw new Error('AI 연결 전입니다. 운영자가 API 키와 모델을 설정해야 합니다. 지금은 샘플과 요청서 다운로드를 사용할 수 있습니다.');
-  const response = await fetcher('https://api.openai.com/v1/responses', {
+  if(!['openai','freellmapi'].includes(provider))throw new Error('AI 제공자 설정을 확인해 주세요.');
+  if(provider==='freellmapi'&&(!/^\d+$/.test(String(routerPort))||Number(routerPort)<1||Number(routerPort)>65535))throw new Error('FreeLLMAPI 로컬 포트를 확인해 주세요.');
+  const endpoint=provider==='freellmapi'?`http://127.0.0.1:${Number(routerPort)}/v1/responses`:'https://api.openai.com/v1/responses';
+  const response = await fetcher(endpoint, {
     method:'POST', signal:AbortSignal.timeout(60000),
     headers:{'Content-Type':'application/json', Authorization:`Bearer ${key}`},
     body:JSON.stringify({model, instructions, input:JSON.stringify(input), store:false, max_output_tokens:4000})
