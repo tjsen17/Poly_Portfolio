@@ -7,6 +7,7 @@ import {prompt} from './prompt.mjs';
 import {validate} from './validation.mjs';
 import {services} from '../frontend/platform/catalog.js';
 import {createBoard} from './board.mjs';
+import {fetchJobPosting} from './job-posting.mjs';
 
 const assets = {
   "/brand/symbol.svg": ["brand/symbol.svg", "image/svg+xml"],
@@ -75,7 +76,11 @@ export function createApp({key = process.env.OPENAI_API_KEY, model = process.env
         const [file,type] = assets[pathname];
         return reply(200,await readFile(new URL(`../frontend/${file}`,import.meta.url)),type);
       }
-      if(req.method === 'GET' && req.url === '/api/status') return reply(200,{configured:Boolean(key && model)});
+    if(req.method === 'GET' && req.url === '/api/status') return reply(200,{configured:Boolean(key && model)});
+    if(req.method === 'GET' && pathname === '/api/job-posting'){
+      try{return reply(200,{text:await fetchJobPosting(new URL(req.url,`http://${expectedHost}`).searchParams.get('url'))});}
+      catch(error){return reply(400,{error:error.message});}
+    }
       if(req.method==='GET' && ['/api/auth/me','/api/auth/config','/api/requests','/api/drafts','/api/notifications'].includes(pathname)){const result=await accounts.handle(pathname,req);return reply(result.status||200,result.body,'application/json; charset=utf-8',result.headers);}
       if(req.method==='GET' && pathname==='/api/legacy-requests'){const user=await accounts.current(req);if(user?.role!=='operator')return reply(403,{error:'운영자 권한이 필요합니다.'});return reply(200,{posts:await board.legacy()});}
       if(req.method === 'GET' && pathname === '/api/posts') return reply(200,{posts:await board.list(await accounts.current(req))});

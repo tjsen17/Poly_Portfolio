@@ -28,6 +28,9 @@ test('real local routes: no-key state, request export, validation and consent',a
   assert.equal((await post(base,'/api/prompt',data,'https://other.example')).status,403);
   assert.equal((await post(base,'/api/prompt',{...data,job:'가'.repeat(12001)})).status,400);
   assert.equal((await post(base,'/api/prompt',{...data,job:'가'.repeat(50000)})).status,413);
+  const workspace=await (await fetch(base+'/workspace/job-fit')).text();
+  assert.match(workspace,/id="job-url"/);
+  assert.equal((await fetch(base+'/api/job-posting?url='+encodeURIComponent('http://127.0.0.1:4317'))).status,400);
  });
 });
 test('HTTP review passes bounded request and extracts actual provider output (provider mocked)',async()=>{

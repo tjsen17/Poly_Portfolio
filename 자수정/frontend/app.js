@@ -37,13 +37,29 @@ $('why-text').textContent = workspace.why;
 $('question-text').textContent = `“${workspace.question}”`;
 $('upload-field').hidden = !workspace.upload;
 if(selectedService.id==='job-fit'){
+  $('job-link-field').hidden=false;
+  $('import-job').addEventListener('click',async()=>{
+    const button=$('import-job'),message=$('job-url-message'),url=$('job-url').value.trim();
+    if(!url){message.textContent='채용 공고 링크를 입력해 주세요.';return;}
+    if($('job').value.trim()&&!confirm('현재 입력한 공고 내용을 링크의 내용으로 바꿀까요?'))return;
+    button.disabled=true;message.textContent='공고 내용을 가져오는 중입니다.';
+    try{
+      const response=await fetch('/api/job-posting?url='+encodeURIComponent(url));
+      const result=await response.json();if(!response.ok)throw new Error(result.error);
+      $('job').value=result.text;$('job').dispatchEvent(new Event('input',{bubbles:true}));
+      message.textContent='공고 내용을 가져왔습니다. 불필요한 문구가 섞이지 않았는지 확인해 주세요.';
+    }catch(error){message.textContent=error.message||'공고를 가져오지 못했습니다. 아래에 직접 붙여 넣어 주세요.';}
+    finally{button.disabled=false;}
+  });
+}
+if(selectedService.id==='job-fit'){
   const essay=$('essay'), label=essay.previousElementSibling, section=document.createElement('fieldset');section.className='experience-fields';
-  section.innerHTML='<legend>경험별로 정리하기</legend><p>경험을 나눠 적으면 분석용 내용이 자동으로 모입니다.</p><div id="experiences"></div><button type="button" id="add-experience" class="subtle">경험 추가</button>';
+  section.innerHTML='<legend>경험별로 정리하기</legend><p>경험명·행동·결과부터 적어 보세요. 역할과 문제는 필요할 때 펼쳐서 보탤 수 있습니다.</p><div id="experiences"></div><button type="button" id="add-experience" class="subtle">경험 추가</button>';
   label.before(section);essay.readOnly=true;
   const preview=document.createElement('details');preview.className='experience-preview';preview.innerHTML='<summary>분석용 내용 미리보기 · <span id="preview-count">0자</span></summary>';section.after(preview);preview.append(label,essay);
   const list=section.querySelector('#experiences');
-  const sync=()=>{essay.value=[...list.children].map((card,i)=>`${i+1}. ${[...card.querySelectorAll('input,textarea')].map(field=>`${field.dataset.label}: ${field.value.trim()}`).join('\n')}`).join('\n\n');preview.querySelector('#preview-count').textContent=`${essay.value.length.toLocaleString()}자`;essay.dispatchEvent(new Event('input',{bubbles:true}));};
-  section.querySelector('#add-experience').addEventListener('click',()=>{if(list.children.length>=5)return;const card=document.createElement('div');card.className='private-block';card.innerHTML='<h3>경험 '+(list.children.length+1)+'</h3><label>경험명<input data-label="경험명" maxlength="100" placeholder="예: 카페 아르바이트"></label><label>내 역할<input data-label="내 역할" maxlength="200"></label><label>마주한 문제<textarea data-label="문제" maxlength="1000" rows="2"></textarea></label><label>내가 한 행동<textarea data-label="행동" maxlength="2000" rows="3"></textarea></label><label>결과 또는 배운 점<textarea data-label="결과" maxlength="1000" rows="2"></textarea></label><button type="button" class="subtle">이 경험 삭제</button>';card.querySelector('button').addEventListener('click',()=>{card.remove();sync();});card.addEventListener('input',sync);list.append(card);});
+  const sync=()=>{essay.value=[...list.children].map((card,i)=>{card.querySelector('summary').textContent=`경험 ${i+1}${card.querySelector('input').value.trim()?' · '+card.querySelector('input').value.trim():''}`;return `${i+1}. ${[...card.querySelectorAll('input,textarea')].map(field=>`${field.dataset.label}: ${field.value.trim()}`).join('\n')}`;}).join('\n\n');preview.querySelector('#preview-count').textContent=`${essay.value.length.toLocaleString()}자`;essay.dispatchEvent(new Event('input',{bubbles:true}));};
+  section.querySelector('#add-experience').addEventListener('click',()=>{if(list.children.length>=5)return;list.querySelectorAll(':scope>details').forEach(item=>item.open=false);const card=document.createElement('details');card.className='private-block';card.open=true;card.innerHTML='<summary>경험 '+(list.children.length+1)+'</summary><label>경험명<input data-label="경험명" maxlength="100" placeholder="예: 카페 아르바이트"></label><details class="experience-more"><summary>내 역할·문제 더 적기 (선택)</summary><label>내 역할<input data-label="내 역할" maxlength="200"></label><label>마주한 문제<textarea data-label="문제" maxlength="1000" rows="2"></textarea></label></details><label>내가 한 행동<textarea data-label="행동" maxlength="2000" rows="3"></textarea></label><label>결과 또는 배운 점<textarea data-label="결과" maxlength="1000" rows="2"></textarea></label><button type="button" class="subtle">이 경험 삭제</button>';card.querySelector('button').addEventListener('click',()=>{card.remove();sync();});card.addEventListener('input',sync);list.append(card);sync();});
   section.querySelector('#add-experience').click();
   $('sample').addEventListener('sample-applied',()=>{const example=essay.value;list.querySelectorAll('input,textarea').forEach(field=>field.value='');list.querySelector('[data-label="행동"]').value=example;sync();});
 }
@@ -55,6 +71,23 @@ if(selectedService.id==='resume'||selectedService.id==='complete'){
   $('sample').addEventListener('sample-applied',()=>{question.querySelectorAll('input').forEach(input=>input.value='');});
 }
 document.title = `${selectedService.label} 작업실 | 자수정`;
+const draftKey=`jasujeong-workspace-draft-${selectedService.id}`;
+const saveWorkspace=()=>{try{sessionStorage.setItem(draftKey,JSON.stringify({job:$('job').value,focus:$('focus').value,essay:$('essay').value,question:$('question')?.value,limit:$('word-limit')?.value,experiences:[...document.querySelectorAll('#experiences>details')].map(card=>[...card.querySelectorAll('input,textarea')].map(field=>field.value))}));}catch{}};
+try{
+  const saved=JSON.parse(sessionStorage.getItem(draftKey)||'null');
+  if(saved&&typeof saved==='object'){
+    $('job').value=saved.job||'';$('focus').value=saved.focus||selectedService.focus;
+    if(selectedService.id==='job-fit'&&Array.isArray(saved.experiences)){
+      const list=$('experiences');while(list.children.length<Math.min(saved.experiences.length,5))$('add-experience').click();
+      [...list.children].forEach((card,i)=>{[...card.querySelectorAll('input,textarea')].forEach((field,j)=>field.value=saved.experiences[i]?.[j]||'');card.querySelector('.experience-more').open=Boolean(saved.experiences[i]?.[1]||saved.experiences[i]?.[2]);});
+      list.querySelector('input')?.dispatchEvent(new Event('input',{bubbles:true}));
+    }else $('essay').value=saved.essay||'';
+    if($('question'))$('question').value=saved.question||'';
+    if($('word-limit'))$('word-limit').value=saved.limit||'';
+  }
+}catch{}
+$('form').addEventListener('input',saveWorkspace);
+$('form').addEventListener('change',saveWorkspace);
 if (workspace.upload) $('resume-file').addEventListener('change',async event=>{
   const file=event.target.files[0];if(!file)return;
   if(file.size>1024*1024||(!file.name.toLowerCase().endsWith('.txt')&&file.type!=='text/plain')){$('file-note').textContent='.txt 파일만 최대 1MB까지 불러올 수 있습니다.';event.target.value='';return;}

@@ -9,7 +9,7 @@
 <div class="workspace">
 <section class="panel"><div class="section-title"><div><h2>지원 자료</h2><p class="section-note" id="form-description">서비스에 필요한 자료를 입력해 주세요.</p></div><button type="button" id="sample" class="subtle">가상 예시 사용</button></div>
 <form id="form">
-<label for="job"><span id="job-label">지원할 채용 공고</span> <small id="job-hint">필수 · 20자 이상</small></label><textarea id="job" name="job" minlength="20" maxlength="12000" required rows="5"></textarea>
+<div id="job-link-field" hidden><label for="job-url">채용 공고 링크</label><div class="url-import"><input id="job-url" type="url" placeholder="https://..." autocomplete="url"><button type="button" id="import-job" class="subtle">공고 가져오기</button></div><p id="job-url-message" role="status">공개된 공고 링크를 입력해 주세요. 가져오지 못하면 아래에 직접 붙여 넣을 수 있습니다.</p></div><label for="job"><span id="job-label">지원할 채용 공고</span> <small id="job-hint">필수 · 20자 이상</small></label><textarea id="job" name="job" minlength="20" maxlength="12000" required rows="5"></textarea>
 <label for="essay"><span id="essay-label">자소서 문항과 현재 답변</span> <small id="count">0 / 12,000자</small></label><textarea id="essay" name="essay" minlength="50" maxlength="12000" required rows="9"></textarea>
 <label id="upload-field" for="resume-file" hidden>자소서 텍스트 파일 불러오기 <small>.txt · 최대 1MB</small><input id="resume-file" type="file" accept=".txt,text/plain"><span class="file-note" id="file-note">파일은 브라우저에서 읽어 입력란에 채우며 서버로 바로 전송하지 않습니다.</span></label>
 <label for="focus"><span id="focus-label">특히 다듬고 싶은 부분</span> <small>선택</small></label><textarea id="focus" name="focus" maxlength="1000" rows="2"></textarea>

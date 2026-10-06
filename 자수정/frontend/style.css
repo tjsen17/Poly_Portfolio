@@ -67,6 +67,11 @@ textarea:disabled { background: #eeeee8; color: var(--muted); }
 .experience-fields label { display: block; margin: 12px 0; font-weight: 600; }
 .experience-fields input { display: block; width: 100%; padding: 12px; border: 1px solid #c9cec3; border-radius: 7px; font: inherit; }
 .experience-fields textarea { margin-top: 7px; }
+.experience-fields details>summary { cursor: pointer; font-weight: 700; }
+.url-import { display: flex; gap: 8px; margin: 8px 0; }
+.url-import input { flex: 1; min-width: 0; padding: 12px; border: 1px solid #c9cec3; border-radius: 7px; font: inherit; }
+#job-link-field p { margin: 6px 0 16px; font-size: 13px; color: #607064; }
+@media (max-width: 600px) { .url-import { flex-direction: column; } }
 .experience-preview { margin: 0 0 20px; padding: 14px 18px; border: 1px solid var(--border); border-radius: 8px; }
 .experience-preview summary { cursor: pointer; font-weight: 600; }
 .experience-preview label { display: block; margin-top: 16px; }
