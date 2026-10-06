@@ -6,6 +6,13 @@ const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<'
 const search = (q='', category='전체') => `<form class="search" action="/services" method="get" role="search"><label class="sr-only" for="q">서비스 검색</label><input id="q" name="q" maxlength="100" value="${escape(q)}" placeholder="자소서, 직무 분석, 면접… 무엇이 필요한가요?"><input type="hidden" name="category" value="${escape(category)}"><button type="submit">검색</button></form>`;
 const art = item => `<div class="service-art ${item.tone}" aria-hidden="true"><span>${item.label}</span><div class="paper"><b>${item.motif}</b><strong>${item.label}</strong><i></i><i></i><i></i></div><em>${item.category==='면접'?'Q → A':'한 문장, 더 선명하게'}</em></div>`;
 const card = item => `<a class="service-card" href="/services/${item.id}">${art(item)}<div class="card-copy"><span class="eyebrow">${item.category} · 운영자 검토 접수</span><h3>${item.title}</h3><p>${item.brief}</p><div class="card-bottom"><span>로컬 체험</span><strong>자세히 보기 ↗</strong></div></div></a>`;
+const reportExamples={
+  resume:[['제출한 문장','저는 책임감이 강하고 꼼꼼합니다.'],['운영자 수정 제안','카페 마감 업무에서 누락을 발견해 체크리스트를 만들고 다음 근무자에게 공유했습니다.'],['수정 이유·확인할 점','성격 묘사 대신 행동을 보여줍니다. 체크리스트를 실제로 만들었는지, 적용 결과가 있었는지는 본인이 확인해야 합니다.']],
+  'job-fit':[['공고 요구','고객 문의를 분류하고 정확하게 전달할 수 있는 사람'],['경험과 연결','카페 근무 중 문의 내용을 유형별로 정리해 다음 근무자에게 전달한 경험을 연결할 수 있습니다.'],['보완 질문','분류 기준과 전달 방식이 실제로 어땠는지 확인한 뒤 지원 문장에 반영합니다.']],
+  interview:[['운영자 질문','인수인계 누락을 발견했을 때 본인이 맡은 역할은 무엇이었나요?'],['꼬리 질문','체크리스트를 쓰기 전후에 달라진 점을 어떻게 확인했나요?'],['최종 피드백 예시','행동은 구체적입니다. 본인 역할과 확인 가능한 결과를 구분해 답하면 더 명확해집니다.']],
+  complete:[['자소서 수정 방향','추상적인 강점 표현을 실제 행동과 근거가 드러나는 문장으로 바꿉니다.'],['직무·면접 연결','공고의 요구와 그 행동이 만나는 지점을 표시하고 예상 질문을 준비합니다.'],['최종 보완점','운영자가 확인되지 않은 성과를 질문으로 남기고, 제출 전 사실관계를 다시 확인하도록 안내합니다.']]
+};
+const reportExample=item=>`<section class="detail-section report-example"><h2>운영자 검토 결과물 예시</h2><p class="disclosure">아래는 구성 이해를 위한 가상 예시입니다. 실제 검토 내용은 제출 자료에 따라 달라집니다.</p><dl>${reportExamples[item.id].map(([label,value])=>`<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p>최종 리포트에는 수정 이유와 다음 보완점을 담고, 완료 후 재검토를 1회 요청할 수 있습니다.</p></section>`;
 const steps = `<ol class="steps"><li><span>01</span><div><h3>필요한 도움을 고르세요</h3><p>문장 첨삭, 직무 연결, 면접 준비 중 지금 필요한 목적을 선택해요.</p></div></li><li><span>02</span><div><h3>서비스에 맞는 자료를 넣으세요</h3><p>공고와 자소서 또는 경험을 선택한 작업실에 입력해요.</p></div></li><li><span>03</span><div><h3>검토하고, 나만의 표현으로 경쟁력을 갖추세요.</h3><p>사실과 표현을 직접 확인하고 필요한 결과를 내려받으세요.</p></div></li></ol>`;
 const params = new URLSearchParams(location.search);
 const path = location.pathname.replace(/\/$/,'') || '/';
@@ -41,6 +48,7 @@ function guide() {
 }
 const selected=services.find(item=>path===`/services/${item.id}`);
 content.innerHTML=path==='/'?home():path==='/services'?listing():path==='/guide'?guide():selected?detail(selected):'<h1>페이지를 찾을 수 없습니다.</h1><a href="/">홈으로</a>';
+if(selected)content.querySelector('.detail-grid article .detail-section:nth-of-type(3)').insertAdjacentHTML('afterend',reportExample(selected));
 if (path==='/board') mountBoard(content);
 if (['/login','/signup','/verify','/my','/request','/operator'].includes(path)) mountPrivate(content);
 setupAccountNav();

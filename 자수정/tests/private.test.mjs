@@ -14,6 +14,29 @@ const customer={email:'customer@example.test',name:'고객',password:'test-only-
 const request={title:'경험 전달력 검토',essay:'카페에서 마감 체크리스트를 작성하고 동료에게 공유한 경험입니다.',note:'경험이 명확히 전달되는지 확인해 주세요.',consent:true};
 const login=async(call,user=customer)=>{const result=await call('/api/auth/login',user);assert.equal(result.status,200);return result.cookie.split(';')[0];};
 
+test('account deletion removes only the customer and their private and board data',async()=>fixture(async options=>{
+ const other={email:'keep@example.test',name:'남을 고객',password:'keep-test-password'};
+ const store=createPrivateStore(options.accountFile);await store.register(customer);await store.register(other);
+ await server(options,async call=>{
+  const owner=await login(call),remaining=await login(call,other);
+  const own=(await call('/api/posts',{category:'질문',title:'삭제할 질문',body:'제 경험을 질문합니다.'},owner)).data.post;
+  const kept=(await call('/api/posts',{category:'정보',title:'남을 글',body:'다른 고객의 글입니다.'},remaining)).data.post;
+  assert.equal((await call('/api/posts/action',{id:kept.id,action:'comment',body:'삭제할 댓글'},owner)).status,200);
+  assert.equal((await call('/api/posts/action',{id:kept.id,action:'report',reason:'삭제할 신고'},owner)).status,200);
+  assert.equal((await call('/api/drafts',{action:'save',title:'삭제할 초안',essay:'고객이 작성한 초안입니다.'},owner)).status,200);
+  assert.equal((await call('/api/requests',request,owner)).status,201);
+  assert.equal((await call('/api/account/delete',{password:'wrong-password'},owner)).status,403);
+  assert.equal((await call('/api/account/delete',{password:customer.password},owner,'https://wrong.example')).status,403);
+  assert.equal((await call('/api/posts',undefined,owner)).data.posts.length,2);
+  const deleted=await call('/api/account/delete',{password:customer.password},owner);assert.equal(deleted.status,200);assert.match(deleted.cookie,/Max-Age=0/);
+  assert.equal((await call('/api/requests',undefined,owner)).status,401);
+  assert.equal((await call('/api/auth/login',customer)).status,401);
+  const posts=(await call('/api/posts',undefined,remaining)).data.posts;assert.deepEqual(posts.map(post=>post.id),[kept.id]);assert.equal(posts[0].comments.length,0);
+  const board=JSON.parse(await readFile(options.boardFile,'utf8'));assert.equal(board[0].reports.length,0);assert.ok(!board.some(post=>post.id===own.id));
+  const db=JSON.parse(await readFile(options.accountFile,'utf8'));assert.deepEqual(db.users.map(user=>user.email),[other.email]);assert.equal(db.requests.length,0);assert.equal((db.drafts||[]).length,0);assert.equal((db.notifications||[]).length,0);
+ });
+}));
+
 test('auth: role injection, credentials, verification, CSRF, logout and static access restrictions',async()=>fixture(async (options,messages)=>{
  await server(options,async call=>{
   for(const route of ['/signup','/login','/request','/my','/operator','/platform/private.js','/platform/private.css'])assert.equal((await call(route)).status,200,route);

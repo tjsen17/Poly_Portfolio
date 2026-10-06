@@ -42,7 +42,24 @@ export function createPrivateStore(file=privateFile,sendVerification=null){
  }
  async function current(req){const sid=(req.headers.cookie||'').match(/(?:^|;\s*)jasu_sid=([a-f0-9]{64})(?:;|$)/)?.[1];if(!sid)return null;const session=sessions.get(hash(sid));if(!session)return null;if(session.expires<Date.now()){sessions.delete(hash(sid));return null;}return (await load()).users.find(u=>u.id===session.userId)||null;}
  function dto(r,user){const {draft,...result}=r;return user.role==='operator'?r:result;}
- return {register,current,async handle(path,req,input={}){
+ return {register,current,async deleteAccount(req,password,removeBoard){
+  const user=await current(req);if(!user)fail('로그인 후 이용해 주세요.',401);
+  if(user.role==='operator')fail('운영자 계정은 이 화면에서 삭제할 수 없습니다.',403);
+  if(typeof password!=='string'||password.length>128)fail('비밀번호를 확인해 주세요.',400);
+  const derived=await scrypt(password,user.salt,64,{N:32768,r:8,p:1,maxmem:64*1024*1024});
+  if(!timingSafeEqual(derived,Buffer.from(user.passwordHash,'hex')))fail('비밀번호가 일치하지 않습니다.',403);
+  await change(async db=>{
+   if(!db.users.some(item=>item.id===user.id))fail('계정을 찾을 수 없습니다.',404);
+   await removeBoard(user.id);
+   const requestIds=new Set(db.requests.filter(item=>item.ownerId===user.id).map(item=>item.id));
+   db.users=db.users.filter(item=>item.id!==user.id);
+   db.requests=db.requests.filter(item=>item.ownerId!==user.id);
+   db.drafts=(db.drafts||[]).filter(item=>item.ownerId!==user.id);
+   db.notifications=(db.notifications||[]).filter(item=>item.userId!==user.id&&!requestIds.has(item.requestId));
+  });
+  for(const [id,session] of sessions)if(session.userId===user.id)sessions.delete(id);
+  return {headers:{'Set-Cookie':cookie('',0)},body:{ok:true}};
+ },async handle(path,req,input={}){
   if(['/api/auth/register','/api/auth/login','/api/auth/verify','/api/auth/resend'].includes(path)){
    if(!input||typeof input!=='object'||Array.isArray(input))fail('입력 형식을 확인해 주세요.');
    const ip=req.socket.remoteAddress,now=Date.now();for(const [key,value]of attempts)if(value.until<now)attempts.delete(key);

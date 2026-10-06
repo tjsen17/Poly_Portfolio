@@ -24,6 +24,7 @@ export function createBoard(file=fileURLToPath(new URL('../data/posts.json',impo
    else if(input.action==='moderate'&&operator){if(typeof input.hidden!=='boolean'||typeof input.pinned!=='boolean')fail('관리 상태를 확인해 주세요.');post.hidden=input.hidden;post.pinned=input.pinned;}
    else fail('이 작업을 수행할 권한이 없습니다.',403);
    return {...result,post:publicPost(post,user)};
-  });}
+  });},
+  async removeUser(userId){return change(posts=>{for(let i=posts.length-1;i>=0;i--){const post=posts[i];if(post.ownerId===userId){posts.splice(i,1);continue;}post.comments=(post.comments||[]).filter(comment=>comment.ownerId!==userId);post.reports=(post.reports||[]).filter(report=>report.userId!==userId);}return {ok:true};});}
  };
 }

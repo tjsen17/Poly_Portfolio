@@ -59,7 +59,7 @@ for (const file of ['platform.js', 'board.js', 'catalog.js', 'platform.css', 'pr
 }
 export function createApp({key = process.env.OPENAI_API_KEY, model = process.env.OPENAI_MODEL, fetcher = fetch, boardFile, accountFile, sendVerification = verificationMailer()} = {}) {
  const board = createBoard(boardFile),accounts=createPrivateStore(accountFile,sendVerification);
- const privatePosts=['/api/auth/register','/api/auth/login','/api/auth/verify','/api/auth/resend','/api/auth/logout','/api/requests','/api/requests/update','/api/requests/reply','/api/requests/recheck','/api/requests/interview','/api/drafts','/api/notifications/read'];
+ const privatePosts=['/api/auth/register','/api/auth/login','/api/auth/verify','/api/auth/resend','/api/auth/logout','/api/account/delete','/api/requests','/api/requests/update','/api/requests/reply','/api/requests/recheck','/api/requests/interview','/api/drafts','/api/notifications/read'];
   // ponytail: one local request at a time; use authenticated per-user quotas before hosting.
   let busy = false;
   return http.createServer(async (req,res) => {
@@ -94,6 +94,7 @@ export function createApp({key = process.env.OPENAI_API_KEY, model = process.env
       }
       let data;
       try {data=JSON.parse(Buffer.concat(chunks).toString());if(!req.url.startsWith('/api/posts')&&!privatePosts.includes(req.url))validate(data);} catch(error) {return reply(400,{error:error instanceof SyntaxError ? '입력 형식이 올바르지 않습니다.' : error.message});}
+      if(req.url==='/api/account/delete'){const result=await accounts.deleteAccount(req,data.password,id=>board.removeUser(id));return reply(200,result.body,'application/json; charset=utf-8',result.headers);}
       if(privatePosts.includes(req.url)){const result=await accounts.handle(req.url,req,data);return reply(result.status||200,result.body,'application/json; charset=utf-8',result.headers);}
       if(req.url === '/api/posts') return reply(201,{post:await board.add(data,await accounts.current(req))});
       if(req.url === '/api/posts/action') return reply(200,await board.mutate(data,await accounts.current(req)));
